@@ -1,0 +1,60 @@
+global_defs {
+  notification_email {
+    {{ keepalived_notification_email }}
+  }
+  notification_email_from {{ inventory_hostname_short }}
+  smtp_server 127.0.0.1
+  smtp_connect_timeout 30
+  router_id {{ inventory_hostname_short }}
+}
+
+{% if keepalived_check_process != "" %}
+vrrp_script {{ keepalived_check_type }} {
+    script "{{ keepalived_check_script[0].dest }}"
+    interval {{ keepalived_interval }}
+    fall {{ keepalived_fails }}
+    rise {{ keepalived_rise }}
+}
+
+{% endif %}
+vrrp_instance VI_1 {
+    state {% if inventory_hostname == groups[ group_names[-1] ][0] %}MASTER{% else %}BACKUP{% endif %}
+
+    interface {{ keepalived_shared_iface }}
+    virtual_router_id {{ keepalived_vip_ips[0].split('/')[0].split('.')[-1] }}
+    priority {{ 100 - 10 * ansible_play_hosts.index( inventory_hostname )}}
+
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass {{ keepalived_vip_ips[0].split('/')[0].split('.')[-1] }}{{ keepalived_vip_ips[0].split('/')[0].split('.')[-1] }}
+    }
+
+{% if groups[ group_names[0] ]|length > 1 %}
+    unicast_src_ip {{ ansible_host }}
+    unicast_peer {
+{% for host in groups[ keepalived_group_name|default(group_names.0,true) ] %}
+{% if inventory_hostname != hostvars[host].inventory_hostname %}
+        {{ hostvars[host].ansible_host }}
+{% endif %}
+{% endfor %}
+    }
+{% endif %}
+
+    virtual_ipaddress {
+{% for item in keepalived_vip_ips %}
+        {%- if item.label is defined %}
+        {{ item }} dev {{ keepalived_vip_iface }} label {{ item.label }}
+        {%- else %}
+        {{ item }} dev {{ keepalived_vip_iface }} label {{ inventory_hostname_short }}
+        {%- endif %}
+
+{% endfor %}
+    }
+
+{% if keepalived_check_process != "" %}
+    track_script {
+        {{ keepalived_check_type }}
+    }
+{% endif %}
+}

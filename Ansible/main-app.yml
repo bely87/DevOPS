@@ -1,0 +1,9 @@
+---
+- name: MAIN - Edit galera
+  import_playbook: playbooks/app/galera-db.yml
+
+- name: MAIN - Edit app
+  import_playbook: playbooks/app/app.yml
+
+#- name: Setting VMs synchronization
+#  import_playbook: playbooks/infra/sync.yml

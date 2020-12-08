@@ -1,0 +1,8 @@
+- include_tasks: install.yml
+  tags: install
+
+- include_tasks: config.yml
+  tags: config
+
+#- include_tasks: copy.yml
+#  tags: config

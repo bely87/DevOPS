@@ -1,0 +1,4 @@
+---
+# - set_fact:
+#     cluster_size: "{{ (( ansible_play_batch|length )/2) | round(0, 'ceil') }}"
+#   when: not mysql_only

@@ -1,0 +1,31 @@
+---
+
+- name: 1011 edit /etc/systemd/system/mariadb.service.d/limits.conf
+  blockinfile:
+    path: /etc/systemd/system/mariadb.service.d/limits.conf
+    create: yes
+    state: present
+    content: |
+      [Service]
+      LimitNOFILE=infinity
+      LimitMEMLOCK=infinity
+
+- name: 1011 configure vm.swappiness
+  sysctl:
+    name: vm.swappiness
+    sysctl_file: '/etc/sysctl.d/swappiness.conf'
+    value: '1'
+    state: present
+    sysctl_set: yes
+    reload: yes
+  when: ansible_distribution == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: 1011 Disable mariadb autostart
+  systemd:
+    name: mariadb
+    enabled: no
+    daemon_reload: yes
+
+- name: 1011 Disable mysql autostart
+  command: >
+    chkconfig mysql off

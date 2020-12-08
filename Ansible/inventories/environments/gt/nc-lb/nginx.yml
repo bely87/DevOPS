@@ -1,0 +1,34 @@
+nginx_ssl_files:
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/intermediate_pem_thawte_sslwildcard_1.crt", dest: "/etc/nginx/ssl/intermediate_pem_thawte_sslwildcard_1.crt" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/next_car_2019_04_03.crt", dest: "/etc/nginx/ssl/{{ nginx_ssl_certificate }}" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/next.carssl.conf", dest: "/etc/nginx/ssl/next.carssl.conf" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/root_pem_thawte_sslwildcard_1.crt", dest: "/etc/nginx/ssl/root_pem_thawte_sslwildcard_1.crt" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/server.key", dest: "/etc/nginx/ssl/{{ nginx_ssl_certificate_key }}" }
+# for all jinja2 features: {% raw %}, etc
+nginx_templates:
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/nginx.conf.j2", dest: "/etc/nginx/nginx.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/nextcar.conf.j2", dest: "/etc/nginx/conf.d/nextcar.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/log.format.j2", dest: "/etc/nginx/log.format" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/test/catalog.conf.j2", dest: "/etc/nginx/conf.d/catalog.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/test/catalogssl.conf.j2", dest: "/etc/nginx/conf.d/catalogssl.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/test/roomdil.conf.j2", dest: "/etc/nginx/conf.d/roomdil.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/test/roomdilssl.conf.j2", dest: "/etc/nginx/conf.d/roomdilssl.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/test/.httpassadmin.j2", dest: "/etc/nginx/.httpassadmin" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/test/.httpassfront.j2", dest: "/etc/nginx/.httpassfront" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/test/nextcar.conf.j2", dest: "/etc/nginx/conf.d/nextcar.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/test/NextcarLocal.conf.j2", dest: "/etc/nginx/conf.d/NextcarLocal.conf" }
+
+
+
+# for inline yaml
+nginx_configs: []
+#  - { content: "", dest: "" }
+nginx_yii2_domen: "test.nextcar.local"
+
+remove: 1
+nginx_server_name_return: "www.{{ nginx_yii2_domen }} 10.205.46.44"
+nginx_server_name: "{{ nginx_yii2_domen }} admin.{{ nginx_yii2_domen }} dealer.{{ nginx_yii2_domen }} client.{{ nginx_yii2_domen }}"
+nginx_redirect: "https://{{ nginx_yii2_domen }}"
+
+nginx_ssl_certificate: next_car_2019_04_03.crt
+nginx_ssl_certificate_key: server.key

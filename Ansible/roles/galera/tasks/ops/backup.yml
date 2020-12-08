@@ -1,0 +1,167 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    backup_path: /var/log/mysql/backup
+    logrotate_project_name: test-bk
+    env: test
+    logrotate_hostname_short: "{{ inventory_hostname_short }}"
+    logrotate_key_path: /var/lib/logrotate/.ssh/loguser_id_rsa
+    backup_root_mycnf_dir: /home/backupstore/{{ env }}/{{ logrotate_project_name }}/{{ logrotate_hostname_short }}/mycnf
+    backup_dir: /home/backupstore/{{ env }}/{{ logrotate_project_name }}/{{ logrotate_hostname_short }}/backup
+    mysql_data_directory: /var/lib/mysql
+  tasks:
+
+    # - block:
+    #   - name: create directory and copy mycnf
+    #     shell: "{{ item }}"
+    #     with_items:
+    #       - "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_key_path }} backupstore@backup.tsed.orglot.office 'rm -rf {{ backup_root_mycnf_dir }}/'"
+    #       - "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_key_path }} backupstore@backup.tsed.orglot.office 'mkdir -p {{ backup_root_mycnf_dir }}/'"
+    #       - "nice /usr/bin/rsync -rt --bwlimit=10000 -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_key_path }}' /root/.my.cnf backupstore@backup.tsed.orglot.office:{{ backup_root_mycnf_dir }}/ > /dev/null 2>&1"
+    #
+    #   - name: remove backup directory
+    #     shell: "rm -rf {{ backup_path }}"
+    #
+    #   - name: create backup directory on bkp src server
+    #     file:
+    #       path: "{{ backup_path }}"
+    #       state: directory
+    #
+    #   - name: create backup
+    #     shell: "innobackupex --defaults-file=/root/.my.cnf {{ backup_path }} 2> /tmp/innobackupex.log"
+    #     ignore_errors: yes
+    #
+    #   - name: create backup directory on bkp storage server
+    #     shell: "{{ item }}"
+    #     with_items:
+    #       - "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_key_path }} backupstore@backup.tsed.orglot.office 'rm -rf {{ backup_dir }}/'"
+    #       - "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_key_path }} backupstore@backup.tsed.orglot.office 'mkdir -p {{ backup_dir }}/'"
+    #       - "nice /usr/bin/rsync -rt --bwlimit=10000 -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_key_path }}' {{ backup_path }}/* backupstore@backup.tsed.orglot.office:{{ backup_dir }}/ > /dev/null 2>&1"
+    #   when: inventory_hostname in groups.backup
+
+    - block:
+
+      - name: stop mariadb
+        service:
+          name: mariadb
+          state: stopped
+
+      - name: remove mysql dirs
+        shell: "rm -rf {{ item }}"
+        with_items:
+          - "{{ mysql_data_directory }}/*"
+          - /var/log/mysql/*bin*
+          - /var/log/mysql/*slow*
+          - /var/log/mysql/*index*
+          - /root/.my.cnf
+        ignore_errors: yes
+
+      # - block:
+        # - name: remove backup directory on backup dst server
+        #   shell: "rm -rf {{ backup_path }}"
+
+        # - name: create backup directory on backup dst server
+        #   file:
+        #     path: "{{ backup_path }}"
+        #     state: directory
+
+        # - name: fetch backup
+        #   shell: "{{ item }}"
+        #   with_items:
+        #     - "nice /usr/bin/rsync -rt --bwlimit=10000 -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_key_path }}'  backupstore@backup.tsed.orglot.office:/home/backupstore/{{ env }}/{{ logrotate_project_name }}/{{ restore_backup }}/backup/ {{ backup_path }}/ > /dev/null 2>&1"
+        #   when: restore_backup is defined
+
+      # - name: fetch mycnf
+      #   shell: "{{ item }}"
+      #   with_items:
+      #     - "nice /usr/bin/rsync -rt --bwlimit=10000 -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_key_path }}'  backupstore@backup.tsed.orglot.office:{{ backup_root_mycnf_dir }}/.my.cnf /root/ > /dev/null 2>&1"
+      #     - "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_key_path }} backupstore@backup.tsed.orglot.office 'rm -f {{ backup_root_mycnf_dir }}/.my.cnf'"
+      #     ignore_errors: yes
+
+      - name: register innobackupex variable
+        shell: "find {{ backup_path }}/2* -maxdepth 0  -type d | tail -n 1"
+        register: innobackupex_dir_stdout
+
+
+      - set_fact:
+          innobackupex_dir: "{{ innobackupex_dir_stdout.stdout }}"
+        when: restore_backup is defined
+
+      - name: prepare backup
+        shell: "innobackupex --apply-log {{ innobackupex_dir }}"
+        when: restore_backup is defined
+
+      - name: copy back backup
+        shell: "innobackupex --copy-back {{ innobackupex_dir }}"
+        when: restore_backup is defined
+
+      - name: 1011 check folders
+        file:
+          path: "{{ item }}"
+          state: directory
+          owner: mysql
+          group: mysql
+          recurse: yes
+        with_items: "{{ mysql_data_directory }}"
+
+      - block:
+        - name: 1011 restorecon mysql dirs
+          shell: restorecon -Rv "{{ item }}"
+          with_items:
+            - "{{ mysql_data_directory }}"
+            - /var/log/mysql
+
+        - name: 1011 add mysqld to permissive mode
+          selinux_permissive:
+            domain: mysqld_t
+            permissive: True
+
+        - name: 1011 semanage myscl dir context
+          shell: semanage fcontext --add -s unconfined_u -t mysqld_db_t '"{{ mysql_data_directory }}"/*'
+        when: ansible_selinux.status == 'enabled'
+
+      - name: start 1 node
+        shell: galera_new_cluster
+        when: first_db_instance == 1
+      when:  inventory_hostname in groups.restore
+
+    - block:
+      - name: stop arbitrator
+        service:
+          name: "{{ item }}"
+          state: stopped
+        with_items:
+        - garbd_test-int-bet-shard1
+        - garbd_test-int-bet-shard3
+        - garbd_test-int-bet-shard5
+        - garbd_test-int-bet-dbproc
+        - garbd_test-int-bet-shard2
+        - garbd_test-int-bet-shard4
+      when: inventory_hostname in groups.arbitrator
+
+    - block:
+      - name: start nodes 2..n
+        service:
+          name: mariadb
+          state: started
+          enabled: false
+        run_once: yes
+        with_items:
+        - "{{ play_hosts_whihtout_arb  }}"
+        delegate_to: "{{ item }}"
+      when: inventory_hostname in groups.restore
+
+    - block:
+      - name: start arbitrator
+        service:
+          name: "{{ item }}"
+          state: started
+        with_items:
+        - garbd_test-int-bet-shard1
+        - garbd_test-int-bet-shard3
+        - garbd_test-int-bet-shard5
+        - garbd_test-int-bet-dbproc
+        - garbd_test-int-bet-shard2
+        - garbd_test-int-bet-shard4
+      when: inventory_hostname in groups.arbitrator

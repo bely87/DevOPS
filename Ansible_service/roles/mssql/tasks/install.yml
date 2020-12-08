@@ -1,0 +1,34 @@
+- name: Copy a files config
+  win_template:
+    src: "{{ lookup('env','PWD') }}/templates/sql-config.ini.j2"
+    dest: 'c:\tmp\sql-config.ini'
+    force: yes
+
+- name: check if the SQL server service is installed
+  win_service:
+    name: mssqlserver  # note this could be different if you are installing it with a custom instance name
+  register: sql_service
+
+- name: install SQL server
+  win_command: '\\{{ folder_install }}\c$\Start\MSSQL\2017_Server\DEV\Setup.exe /ConfigurationFile=C:\tmp\sql-config.ini /IACCEPTSQLSERVERLICENSETERMS /IACCEPTSQLSERVERLICENSETERMS /ACTION=Install /SAPWD={{ db_su_password }}'
+  register: sql_install
+  failed_when: not (sql_install.rc == 0 or sql_install.rc == 3010)
+  become: yes
+  vars:  # not you can also just set these as host vars instead
+    ansible_become_method: runas
+    ansible_become_user: '{{ domain_user }}'
+    ansible_become_pass: '{{domain_password}}'
+  when: sql_service.exists == False
+
+- name: install SQL Server Management Studio 17.8.1
+  win_command: '\\{{ folder_install }}\c$\Start\MSSQL\SQL_Server_Management_Studio_17.8.1\SSMS-Setup-ENU.exe  /install /passive /norestart /q'
+  become: yes
+  vars:  # not you can also just set these as host vars instead
+    ansible_become_method: runas
+    ansible_become_user: '{{ domain_user }}'
+    ansible_become_pass: '{{domain_password}}'
+  when: sql_service.exists == False
+
+#- name: reboot after install if required
+#  win_reboot:
+#  when: sql_install.rc == 3010

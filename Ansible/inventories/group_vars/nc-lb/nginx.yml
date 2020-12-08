@@ -1,0 +1,15 @@
+---
+nginx_version: ''
+nginx_repo: 'ORGLOT_OFFICE_NginX_NginX_Stable_for_RHEL7_-_x86_64'
+
+
+nginx_uid: 809
+
+nginx_conf_dir: /etc/nginx
+nginx_home: /var/cache/nginx
+
+remove: 0
+nginx_user: 0
+
+nginx_upstream_host: "{{ groups['nc-app'] }}"
+nginx_upstream_port: 80

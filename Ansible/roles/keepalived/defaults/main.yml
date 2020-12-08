@@ -1,0 +1,150 @@
+---
+
+# Variables for role keepalived
+
+keepalived_notification_email: sysadmin@stoloto.ru
+keepalived_shared_iface: "{{ ansible_default_ipv4.interface }}"
+keepalived_vip_iface: "{{ ansible_default_ipv4.interface }}"
+keepalived_interval: 2
+keepalived_fails: 2
+keepalived_rise: 2
+keepalived_group_name: "{{ group_names[-1] }}"
+keepalived_global_path: "{{ lookup('env','PWD') }}/inventories/global/{{ keepalived_group_name }}"
+keepalived_pkg_version: "1.2.13-9.el7_3"
+keepalived_file_path: "/etc/sysctl.d/keepalived.conf"
+keepalived_check_proc_list: []
+keepalived_include: "/tmp"
+templates_all: []
+keepalived_check_link_list: []
+
+keepalived_packages:
+- keepalived-{{ keepalived_pkg_version }}
+- ipvsadm
+- psmisc
+- util-linux
+- net-tools
+- procps-ng
+
+keepalived_sysctl_directives:
+  net.ipv4.ip_forward: 1
+  net.ipv4.ip_nonlocal_bind: 1
+
+virtual_servers: []
+vip_routes: []
+
+keepalived_check_scripts:
+- dest: /usr/local/bin/check_keepalived.sh
+  mode: 755
+  content: |
+    #!/bin/bash 
+    {% for proc in keepalived_check_proc_list %}
+    /bin/pgrep -f {{ proc }} > /dev/null
+    if [[ "$?" -ne "0" ]]; then
+            /usr/bin/logger "{{ proc }} is not running. Setting keepalived state to FAULT."
+            exit 1
+    fi
+    {% endfor %}
+    {% for link in keepalived_check_link_list %}
+    curl --max-time 1 {{ link }} > /dev/null
+    if [[ "$?" -ne "0" ]]; then
+            /usr/bin/logger "{{ link }} is not available. Setting keepalived state to FAULT."
+            exit 1
+    fi
+    {% endfor %} 
+    exit 0
+
+keepalived_notify_scripts: []
+
+
+templates: []
+
+debug: 0
+
+config_dest: "{%- if debug -%} /tmp/{{ inventory_hostname }}-keepalived.conf {%- else -%} /etc/keepalived/keepalived.conf {%- endif -%}"
+
+config_host: "{%- if debug -%} localhost {%- else -%} {{ inventory_hostname }} {%- endif -%}"
+
+config: |
+  {%- raw %}
+  global_defs {
+    notification_email {
+      {{ keepalived_notification_email }}
+    }
+    notification_email_from {{ inventory_hostname_short }}
+    smtp_server 127.0.0.1
+    smtp_connect_timeout 30
+    router_id {{ inventory_hostname_short }}
+  }
+
+  {% if keepalived_check_proc_list != [] or keepalived_check_link_list != []%}
+  vrrp_script check_status {
+      script "{{ keepalived_check_scripts[0].dest }}"
+      interval {{ keepalived_interval }}
+      fall {{ keepalived_fails }}
+      rise {{ keepalived_rise }}
+  }
+  {% endif %}
+
+  vrrp_instance VI_1 {
+      state {% if inventory_hostname == groups[ keepalived_group_name ][0] %}MASTER{% else %}BACKUP{% endif %}
+
+      interface {{ keepalived_shared_iface }}
+      virtual_router_id {{ vip_ips[0].ip.split('/')[0].split('.')[-1] }}
+      priority {{ 100 - 10 * groups[keepalived_group_name].index( inventory_hostname )}}
+
+      advert_int 1
+      authentication {
+          auth_type PASS
+          auth_pass {{ vip_ips[0].ip.split('/')[0].split('.')[-1] }}{{ vip_ips[0].ip.split('/')[0].split('.')[-1] }}
+      }
+
+  {% if groups[ keepalived_group_name ]|length > 1 %}
+      unicast_src_ip {{ hostvars[ inventory_hostname ][ "ansible_"+keepalived_shared_iface ].ipv4.address }}
+      unicast_peer {
+  {% for host in groups[ keepalived_group_name ] %}
+  {% if inventory_hostname != hostvars[host].inventory_hostname %}
+          {{ hostvars[host][ "ansible_"+keepalived_shared_iface ].ipv4.address }}
+  {% endif %}
+  {% endfor %}
+      }
+  {% endif %}
+
+      virtual_ipaddress {
+  {% for item in vip_ips %}
+          {%- if item.label is defined %}
+          {{ item.ip }} dev {{ keepalived_vip_iface }} label {{ item.label }}
+          {%- else %}
+          {{ item.ip }} dev {{ keepalived_vip_iface }} label vrrp-{{ loop.index }}
+          {%- endif %}
+
+  {% endfor %}
+      }
+
+  {% if vip_routes|length > 0 %}
+      virtual_routes {
+  {% for item in vip_routes %}
+          {{ item }}
+  {% endfor %}
+
+      }
+  {% endif %}
+
+  {% if keepalived_check_proc_list != [] or keepalived_check_link_list != []%}
+      track_script {
+          check_status
+      }
+  {% endif %}
+
+  {% if keepalived_notify_scripts != [] %}
+      notify {{ keepalived_notify_scripts.0.dest }}
+  {% endif %}
+  }
+
+  {% for item in templates %}
+  # ----------------------- START {{ item|basename }}
+  {% include item|basename ignore missing %}
+
+  # ----------------------- END {{ item|basename }}
+
+  {% endfor %}
+  {% endraw -%}

@@ -1,0 +1,2 @@
+firewalld_add:
+  - { zone: "public", port: "3306", type: "/tcp" }

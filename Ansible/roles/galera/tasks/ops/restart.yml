@@ -1,0 +1,47 @@
+---
+
+- name: register grastate.dat
+  stat:
+    path: /var/lib/mysql/grastate.dat
+  register: grastate
+
+- name: register safe_to_bootstrap from grastate.dat
+  shell: "grep safe_to_bootstrap /var/lib/mysql/grastate.dat"
+  register: safe_to_bootstrap
+  when: grastate.stat.exists
+
+
+- set_fact:
+    bootstrap_value: "{{ safe_to_bootstrap.stdout.split(' ')[1] }}"
+  when: safe_to_bootstrap.stdout is defined
+
+- name: set_fact bootstrap_node name
+  set_fact:
+    bootstrap_node: "{{ hostvars[ item ]['inventory_hostname']  }}"
+  with_items: "{{ groups['galera'] }}"
+  when: hostvars[ item ]['bootstrap_value'] is defined and hostvars[ item ]['bootstrap_value'] == '1'
+
+- debug: msg="{{ bootstrap_node }}"
+
+- name: Start MariaDB on safe_to_bootstrap MariaDB Galera cluster node
+  service:
+    name: mariadb
+    state: restarted
+  when: inventory_hostname in groups['galera'] and inventory_hostname == bootstrap_node
+  async: 120
+  poll: 0
+
+
+- name: restart arbitrator
+  service:
+    name: "garbd_{{ galera_wsrep_cluster_name }}"
+    state: restarted
+  when: inventory_hostname in groups[ 'arbitrator' ]
+  async: 120
+  poll: 0
+
+- name: Restart the other MariaDB Galera cluster nodes
+  service:
+    name: mariadb
+    state: restarted
+  when: inventory_hostname not in groups[ 'arbitrator' ] and inventory_hostname != bootstrap_node

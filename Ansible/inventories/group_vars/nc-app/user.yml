@@ -1,0 +1,5 @@
+user_create:
+  - { name: "bitrix", uid: "1002", group: "bitrix"}
+limits_add:
+  - { domain: "bitrix", limit_type: "soft", limit_item: "nofile", value: "10240"}
+  - { domain: "bitrix", limit_type: "hard", limit_item: "nofile", value: "10240"}

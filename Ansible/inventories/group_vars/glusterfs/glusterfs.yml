@@ -1,0 +1,6 @@
+---
+glusterfs_brick_path: /mnt/data
+glusterfs_volume_name: files
+glusterfs_volume_path: "{{ glusterfs_brick_path }}/{{glusterfs_volume_name}}"
+
+glusterfs_repo: ORGLOT_OFFICE_centos7_gluster38_centos7_gluster38_repo

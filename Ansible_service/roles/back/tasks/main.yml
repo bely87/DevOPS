@@ -1,0 +1,62 @@
+- name: Create directory structure
+  win_file:
+    path: "{{ back_folder }}"
+    state: directory
+
+- name: Add access Folder
+  win_acl:
+    path: "{{ back_folder }}"
+    user: "{{ back_user_service }}"
+    rights: Read,ReadAndExecute,ListDirectory
+    type: allow
+    state: present
+    description: Auriga
+    inherit: ContainerInherit, ObjectInherit
+    propagation: 'None'
+
+- name: Remove a service
+  win_service:
+    name: Auriga
+    state: absent
+  ignore_errors: yes
+
+- name: Copy a folder recursively where the source is on the remote host
+  win_copy:
+    src: '\\{{ folder_install }}\c$\Start\Auriga\'
+    dest: "{{ back_folder }}/"
+    remote_src: yes
+  become: yes
+  vars:  # not you can also just set these as host vars instead
+    ansible_become_method: runas
+    ansible_become_user: '{{ domain_user }}'
+    ansible_become_pass: '{{domain_password}}'
+
+- name: install .net
+  win_command: '\\{{ folder_install }}\c$\Start\MS_NET\4_7_1\NDP471-KB4033342-x86-x64-AllOS-ENU.exe /install /passive /norestart /'
+  become: yes
+  vars:  # not you can also just set these as host vars instead
+    ansible_become_method: runas
+    ansible_become_user: '{{ domain_user }}'
+    ansible_become_pass: '{{domain_password}}'
+
+- name: Copy a files config
+  win_template:
+    src: "{{ lookup('env','PWD') }}/templates/Auriga.ini.j2"
+    dest: '{{ back_folder }}\Auriga.ini'
+    force: yes
+
+- name: delete user http
+  win_command: "netsh http delete urlacl url=http://+:80/"
+  ignore_errors: yes
+
+- name: Add user http
+  win_command: "netsh http add urlacl url=http://+:80/ user={{ back_user_service }}"
+
+- name: Set the log on user to a domain account
+  win_service:
+    name: Auriga
+    path: "{{ back_folder }}{{ back_service_name }}"
+    state: restarted
+    start_mode: auto
+    username: "{{ back_user_service }}"
+    password: "{{ back_user_password_service }}"

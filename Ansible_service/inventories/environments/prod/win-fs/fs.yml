@@ -1,0 +1,12 @@
+fs_folder_create:
+  - { name: 'c:\Start', state: directory}
+  - { name: 'c:\Start\sources\sxs', state: directory}
+  - { name: 'c:\Start\1c', state: directory}
+  - { name: 'c:\Start\1c\windows64full', state: directory}
+  - { name: 'c:\Start\Auriga', state: directory}
+  - { name: 'c:\Start\MS_NET', state: directory}
+  - { name: 'c:\Start\MSSQL', state: directory}
+  - { name: 'c:\Start\MSSQL\2017_Server\DEV', state: directory}
+  - { name: 'c:\Start\MSSQL\SQL_Server_Management_Studio_17.8.1', state: directory}
+  - { name: 'c:\Start\BK\mssql', state: directory}
+  - { name: 'c:\Start\Native_Client', state: directory}

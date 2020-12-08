@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Script for full/incremental backup of mariadb.
+
+export PATH=/usr/bin
+TIMESTAMP=$(date +%F-%H-%M)
+BACKUPDIR=/backup
+LOG_db=/var/log/xtrabackup-log/backupDB.log
+LOG_current=/var/log/xtrabackup-log/backupDB-progress.log
+touch ${LOG_db} ${LOG_current}
+[[ $? -ne 0 ]] && logger "Cannot access log files ${LOG_db} and ${LOG_current}" && exit 1
+[[ $(pgrep -f "perl /usr/bin/innobackupex") ]] && echo "$(date): Another backup process is in progress, terminated." >> ${LOG_db} && exit 1
+
+FULLDAYS=2 # Number of days between full backups
+FULL=1 #full backup flag
+
+[[ $(find ${BACKUPDIR} -mtime -${FULLDAYS} -name '*full.xbstream') ]] && FULL=0
+
+case ${FULL} in
+    0)
+        LSN=$(ls -1t ${BACKUPDIR} | head -1 | awk -F\- '{print $(NF-1)}')
+        innobackupex --defaults-file=/root/.my.cnf \
+            --no-timestamp \
+            --use-memory=8G \
+            --stream=xbstream \
+            --parallel=4 \
+            --tmpdir=/backup \
+            --slave-info \
+            --safe-slave-backup \
+            --incremental \
+            --incremental-lsn=${LSN} \
+            --compress \
+            --compress-threads=8 \
+            ./ \
+            > ${BACKUPDIR}/backup-maria-$TIMESTAMP-current-incr.xbstream 2>> ${LOG_current}
+        [[ $? -ne 0 ]] && echo "$(date): ERROR: innobackupex did not completed incremental backup." >> ${LOG_db} && exit 1
+        LSN=$(grep 'latest check point' ${LOG_current} | tail -1 | awk -F\' '{print $(NF-1)}')
+        [[ -z ${LSN} ]] && echo "$(date): WARNING: ${LOG_current} was rotated, incremental backup will be done in next hour." >> ${LOG_db} && /bin/rm -f ${BACKUPDIR}/backup-maria-$TIMESTAMP-current-incr.xbstream && exit 1
+        mv ${BACKUPDIR}/backup-maria-$TIMESTAMP-current-incr.xbstream ${BACKUPDIR}/backup-maria-$TIMESTAMP-${LSN}-incr.xbstream
+    ;;
+    1)
+        innobackupex --defaults-file=/root/.my.cnf \
+            --no-timestamp \
+            --use-memory=8G \
+            --stream=xbstream \
+            --parallel=4 \
+            --tmpdir=/backup \
+            --slave-info \
+            --safe-slave-backup \
+            --compress \
+            --compress-threads=8 \
+            ./ \
+            > ${BACKUPDIR}/backup-maria-$TIMESTAMP-current-full.xbstream 2>> ${LOG_current}
+        [[ $? -ne 0 ]] && echo "$(date): ERROR: innobackupex did not completed full backup." >> ${LOG_db} && exit 1
+        LSN=$(grep 'latest check point' ${LOG_current} | tail -1| awk -F\' '{print $(NF-1)}')
+        [[ -z ${LSN} ]] && echo "$(date): WARNING: ${LOG_current} was rotated, full backup will be done in next hour." >> ${LOG_db} && /bin/rm -f ${BACKUPDIR}/backup-maria-$TIMESTAMP-current-full.xbstream && exit 1
+        mv ${BACKUPDIR}/backup-maria-$TIMESTAMP-current-full.xbstream ${BACKUPDIR}/backup-maria-$TIMESTAMP-${LSN}-full.xbstream
+    ;;
+    *) echo "$(date): ERROR: FULL flag is out of range" >> ${LOG_db} && exit 1
+    ;;
+esac

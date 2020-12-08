@@ -1,0 +1,2 @@
+UserParameter=keepalived_if,ip a | grep 'global secondary'
+UserParameter=hostping[*],ping -c 4 $1 -q | grep -w .% | cut -f 6 -d ' ' | cut -f 1 -d '%'

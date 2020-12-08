@@ -1,0 +1,219 @@
+ server {
+        charset utf-8;
+        client_max_body_size 128M;
+
+        listen 80; ## listen for ipv4
+        #listen [::]:80 default_server ipv6only=on; ## listen for ipv6
+
+        server_name {{ nginx_yii2_frontend_server_name }}{{ nginx_yii2_domen }};
+        root        {{ app_yii2_www }}/{{ nginx_yii2_frontend_root }};
+        index       index.php;
+
+        access_log  {{ nginx_log }}/{{ nginx_yii2_frontend }}-access.log;
+        error_log   {{ nginx_log }}/{{ nginx_yii2_frontend }}-error.log;
+
+        location / {
+            # Redirect everything that isn't a real file to index.php
+            try_files $uri $uri/ /index.php$is_args$args;
+        }
+
+        # uncomment to avoid processing of calls to non-existing static files by Yii
+        #location ~ \.(js|css|png|jpg|gif|swf|ico|pdf|mov|fla|zip|rar)$ {
+        #    try_files $uri =404;
+        #}
+        #error_page 404 /404.html;
+
+        # deny accessing php files for the /assets directory
+        location ~ ^/assets/.*\.php$ {
+            deny all;
+        }
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_pass    backend;
+            #fastcgi_pass 127.0.0.1:9000;
+            #fastcgi_pass unix:/var/run/php5-fpm.sock;
+            try_files $uri =404;
+        }
+
+        location ~* /\. {
+            deny all;
+        }
+    }
+
+    server {
+        charset utf-8;
+        client_max_body_size 128M;
+
+        listen 80; ## listen for ipv4
+        #listen [::]:80 default_server ipv6only=on; ## listen for ipv6
+
+        server_name {{ nginx_yii2_backend_server_name }}{{ nginx_yii2_domen }};
+        root        {{ app_yii2_www }}/{{ nginx_yii2_backend_root }};
+        index       index.php;
+
+        access_log  {{ nginx_log }}/{{ nginx_yii2_backend }}-access.log;
+        error_log   {{ nginx_log }}/{{ nginx_yii2_backend }}-error.log;
+
+        location / {
+            # Redirect everything that isn't a real file to index.php
+            try_files $uri $uri/ /index.php$is_args$args;
+        }
+
+        # uncomment to avoid processing of calls to non-existing static files by Yii
+        #location ~ \.(js|css|png|jpg|gif|swf|ico|pdf|mov|fla|zip|rar)$ {
+        #    try_files $uri =404;
+        #}
+        #error_page 404 /404.html;
+
+        # deny accessing php files for the /assets directory
+        location ~ ^/assets/.*\.php$ {
+            deny all;
+        }
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+	    fastcgi_pass    backend;
+            #fastcgi_pass 127.0.0.1:9000;
+            #fastcgi_pass unix:/var/run/php5-fpm.sock;
+            try_files $uri =404;
+        }
+
+        location ~* /\. {
+            deny all;
+        }
+    }
+
+    server {
+        charset utf-8;
+        client_max_body_size 128M;
+
+        listen 80; ## listen for ipv4
+        #listen [::]:80 default_server ipv6only=on; ## listen for ipv6
+
+        server_name {{ nginx_yii2_dealer_server_name }}{{ nginx_yii2_domen }};
+        root        {{ app_yii2_www }}/{{ nginx_yii2_dealer_root }};
+        index       index.php;
+
+        access_log  {{ nginx_log }}/{{ nginx_yii2_dealer }}-access.log;
+        error_log   {{ nginx_log }}/{{ nginx_yii2_dealer }}-error.log;
+
+        location / {
+            # Redirect everything that isn't a real file to index.php
+            try_files $uri $uri/ /index.php$is_args$args;
+        }
+
+        # uncomment to avoid processing of calls to non-existing static files by Yii
+        #location ~ \.(js|css|png|jpg|gif|swf|ico|pdf|mov|fla|zip|rar)$ {
+        #    try_files $uri =404;
+        #}
+        #error_page 404 /404.html;
+
+        # deny accessing php files for the /assets directory
+        location ~ ^/assets/.*\.php$ {
+            deny all;
+        }
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_pass    backend;
+            #fastcgi_pass 127.0.0.1:9000;
+            #fastcgi_pass unix:/var/run/php5-fpm.sock;
+            try_files $uri =404;
+        }
+
+        location ~* /\. {
+            deny all;
+        }
+    }
+
+    server {
+        charset utf-8;
+        client_max_body_size 128M;
+
+        listen 80; ## listen for ipv4
+        #listen [::]:80 default_server ipv6only=on; ## listen for ipv6
+
+        server_name {{ nginx_yii2_client_server_name }}{{ nginx_yii2_domen }};
+        root        {{ app_yii2_www }}/{{ nginx_yii2_client_root }};
+        index       index.php;
+
+        access_log  {{ nginx_log }}/{{ nginx_yii2_client }}-access.log;
+        error_log   {{ nginx_log }}/{{ nginx_yii2_client }}-error.log;
+
+        location / {
+            # Redirect everything that isn't a real file to index.php
+            try_files $uri $uri/ /index.php$is_args$args;
+        }
+
+        # uncomment to avoid processing of calls to non-existing static files by Yii
+        #location ~ \.(js|css|png|jpg|gif|swf|ico|pdf|mov|fla|zip|rar)$ {
+        #    try_files $uri =404;
+        #}
+        #error_page 404 /404.html;
+
+        # deny accessing php files for the /assets directory
+        location ~ ^/assets/.*\.php$ {
+            deny all;
+        }
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_pass    backend;
+            #fastcgi_pass 127.0.0.1:9000;
+            #fastcgi_pass unix:/var/run/php5-fpm.sock;
+            try_files $uri =404;
+        }
+
+        location ~* /\. {
+            deny all;
+        }
+    }
+
+    server {
+        charset utf-8;
+        client_max_body_size 128M;
+
+        listen 80; ## listen for ipv4
+        #listen [::]:80 default_server ipv6only=on; ## listen for ipv6
+
+        server_name {{ nginx_yii2_api_server_name }}{{ nginx_yii2_domen }};
+        root        {{ app_yii2_www }}/{{ nginx_yii2_api_root }};
+        index       index.php;
+
+        access_log  {{ nginx_log }}/{{ nginx_yii2_api }}-access.log;
+        error_log   {{ nginx_log }}/{{ nginx_yii2_api }}-error.log;
+
+        location / {
+            # Redirect everything that isn't a real file to index.php
+            try_files $uri $uri/ /index.php$is_args$args;
+        }
+
+        # uncomment to avoid processing of calls to non-existing static files by Yii
+        #location ~ \.(js|css|png|jpg|gif|swf|ico|pdf|mov|fla|zip|rar)$ {
+        #    try_files $uri =404;
+        #}
+        #error_page 404 /404.html;
+
+        # deny accessing php files for the /assets directory
+        location ~ ^/assets/.*\.php$ {
+            deny all;
+        }
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_pass    backend;
+            #fastcgi_pass 127.0.0.1:9000;
+            #fastcgi_pass unix:/var/run/php5-fpm.sock;
+            try_files $uri =404;
+        }
+
+        location ~* /\. {
+            deny all;
+        }
+    }

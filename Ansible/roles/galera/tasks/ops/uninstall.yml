@@ -1,0 +1,50 @@
+---
+- block:
+  - name: Ensure MariaDB is stopped
+    service:
+      name: mariadb
+      state: stopped
+    ignore_errors: yes
+
+  - name: remove directories
+    shell: "find {{ item }} -delete"
+    with_items: "{{ mysql_directories }}"
+    ignore_errors: yes
+
+  - name: remove configs
+    file:
+      dest: "{{ item }}"
+      state: absent
+    with_items:
+      - /etc/my.cnf.d
+      - /root/.my.cnf
+
+  when: inventory_hostname not in groups.arbitrator|default([])
+
+- block:
+  - name: stop gardb
+    service:
+      name: "garbd_{{ galera_wsrep_cluster_name }}"
+      state: stopped
+    ignore_errors: yes
+
+  - name: remove configs
+    file:
+      dest: "{{ item }}"
+      state: absent
+    with_items:
+      - "/usr/bin/garb-{{ galera_wsrep_cluster_name }}-systemd"
+      - "/etc/systemd/system/garbd_{{ galera_wsrep_cluster_name }}.service"
+      - "/etc/sysconfig/garb_{{ galera_wsrep_cluster_name }}"
+  when: inventory_hostname in groups.arbitrator|default([])
+
+- name: yum-complete-transaction
+  shell: yum-complete-transaction
+
+- name: remove packages
+  yum:
+    name: "{{ item }}"
+    state: absent
+    skip_broken: yes
+  with_items:
+    - "{{ galera_uninstall_pkgs }}"

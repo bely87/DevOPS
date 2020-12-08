@@ -1,0 +1,23 @@
+- name: 1011 Add backend users
+  mysql_user:
+    name: "{{ item.name }}"
+    host: "{{ item.host }}"
+    password: "{{ item.password }}"
+    priv: "{{ item.grants }}"
+  with_items:
+    - "{{ mysql_users }}"
+  tags: app-create
+
+- name: Create a new database main
+  mysql_db:
+    name: "{{ app_yii_mysql_dbname }}"
+    encoding: utf8
+    state: present
+  tags: app-create
+
+- name: Create a new database test
+  mysql_db:
+    name: "{{ app_yii_mysql_dbname }}_test"
+    encoding: utf8
+    state: present
+  tags: app-create

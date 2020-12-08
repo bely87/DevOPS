@@ -1,0 +1,51 @@
+- name: lvcreate/resize
+  lvol:
+    vg: "{{ item.0.name }}"
+    lv: "{{ item.1.name }}"
+    size: "{{ ((item.1.size)|int|abs)*1024-20 }}"
+  with_subelements:
+    - "{{ vm_config.vgs }}"
+    - "lvs"
+# - pause: prompt="--------------"
+
+# - name: mkfs
+- name: mkfs
+  filesystem:
+    fstype: "{{item.1.fstype|default('xfs')}}"
+    dev: "/dev/{{ item.0.name }}/{{ item.1.name }}"
+    resizefs: yes
+  with_subelements:
+    - "{{ vm_config.vgs }}"
+    - "lvs"
+
+- name: check mountpoints
+  file:
+    dest: "{{ item.1.m_point }}"
+    state: directory
+  with_subelements:
+    - "{{ vm_config.vgs }}"
+    - "lvs"
+
+- name: mount without opts
+  mount:
+    opts: "defaults,noatime,nobarrier,nodiratime"
+    src: "/dev/{{ item.0.name }}/{{ item.1.name }}"
+    path: "{{ item.1.m_point }}"
+    fstype: "{{item.1.fstype|default('xfs')}}"
+    state: mounted
+  with_subelements:
+    - "{{ vm_config.vgs }}"
+    - "lvs"
+  when: item.1.opts is not defined
+
+- name: mount with opts
+  mount:
+    opts: "{{ item.1.opts | default('') }}"
+    src: "/dev/{{ item.0.name }}/{{ item.1.name }}"
+    path: "{{ item.1.m_point }}"
+    fstype: "{{item.1.fstype|default('xfs')}}"
+    state: mounted
+  with_subelements:
+    - "{{ vm_config.vgs }}"
+    - "lvs"
+  when: item.1.opts is defined

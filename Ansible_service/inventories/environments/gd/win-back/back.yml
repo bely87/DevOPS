@@ -1,0 +1,12 @@
+back_user_service: srv-dev-back-auriga@nextcar.local
+back_user_password_service: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          63386137356531343130363339623663343432623666373763363436356235363835313830663731
+          3637353965363363383938663932666266663639653461340a353031393562326430353633613364
+          61333735323133343464386238323466666438623366336435613630323834306539323738326663
+          3462333161363630380a383835626238663763356463303064643537373832363062633665396363
+          3530
+back_folder: C:\Program Files\Auriga
+back_service_name: \AurigaService.exe
+back_server_mssql: "{{ hostvars[groups['win-db'][0]].inventory_hostname }}"
+back_name_db_mssql: "{{db_import_database_Auriga[0].name}}"

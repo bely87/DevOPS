@@ -1,0 +1,4 @@
+Server=gate2-zabbix-proxy.oets.orglot.office,zabbix-proxy2.tsed.orglot.office,zabbix-proxy1.tsed.orglot.office,zabbix-devops.oets.orglot.office,abbix-dev-proxy1.tsed.orglot.office,zabbix-dev-proxy2.tsed.orglot.office
+
+ServerActive=gate2-zabbix-proxy.oets.orglot.office,zabbix-proxy2.tsed.orglot.office,zabbix-proxy1.tsed.orglot.office,zabbix-devops.oets.orglot.office,zabbix-dev-proxy1.tsed.orglot.office,zabbix-dev-proxy2.tsed.orglot.office
+Hostname={{ inventory_hostname }}

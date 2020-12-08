@@ -1,0 +1,13 @@
+nginx_ssl_files: []
+#  - { src: "", dest: "" }
+
+# for all jinja2 features: {% raw %}, etc
+nginx_templates:
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/nginx.conf.j2", dest: "/etc/nginx/nginx.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/nextcar.conf.j2", dest: "/etc/nginx/conf.d/next.car.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/fpm_settings.sub.j2", dest: "/etc/nginx/conf.d/fpm_settings.sub" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/nextcar_yii2.conf.j2", dest: "/etc/nginx/conf.d/nextcar_yii2.conf" }
+# for inline yaml
+nginx_configs: []
+#  - { content: "", dest: "" }
+nginx_yii2_domen: "prod.nextcar.local"

@@ -1,0 +1,33 @@
+---
+# Galera nodes subblock -----------------------------------------------------------
+  # - block:
+  #  deprecated since nodes HA use only keepalived https://confluence.stoloto.ru/pages/viewpage.action?pageId=74318059
+  #   - name: 1000 Add xinetd mysqlchk config
+  #     template:
+  #       src: deprecated/mysqlchk.j2
+  #       dest: /etc/xinetd.d/mysqlchk
+  #       owner: root
+  #       group: root
+
+
+    # - name: 1000 add clustercheck sh script
+    #   template:
+    #     src: deprecated/clustercheck.j2
+    #     dest: /usr/bin/clustercheck
+    #     owner: root
+    #     group: root
+    #     mode: 0775
+    #   with_items: "{{ mysql_users }}"
+    #   when: item.name == 'clustercheck'
+    #
+    # - name: 1000 add mysqlchk to /etc/services
+    #   lineinfile:
+    #     dest: /etc/services
+    #     state: present
+    #     regexp: '^mysqlchk'
+    #     line: 'mysqlchk        9200/tcp                #mysqlchk'
+    #     backup: yes
+    #   notify: restart xinetd
+    # when: not mysql_only
+
+  # when: inventory_hostname not in groups.arbitrator|default([])

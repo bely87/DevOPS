@@ -1,0 +1,29 @@
+vsphere_esxi_host: "{{ server_esxi }}.orglot.office"
+vsphere_datastore_hdd: "{{ server_esxi_datastore }}-LocalStore-HDD"
+vsphere_datastore_ssd: "{{ server_esxi_datastore }}-LocalStore-SSD"
+vsphere_template: "Template_rhel75_uni_nc"
+vsphere_api_address: "8bus-vc.orglot.office"
+vsphere_dc: "NC-DC"
+vsphere_folder: ""
+nameservers: "10.200.80.50"
+
+vshpere_port_groups:
+- name: 'NC-Front (1224)'
+  netmask: "{{ ip_netmask }}"
+  gateway: "{{ ip_gateway }}"
+
+disk:
+- size: 1gb
+  datastore: "{{ vsphere_datastore_hdd }}"
+- size: 22gb
+  datastore: "{{ vsphere_datastore_hdd }}"
+
+additional_disks:
+- size: 200gb
+  datastore: "{{ vsphere_datastore_hdd }}"
+
+ip_gateway: 10.205.64.250
+ip_netmask: 255.255.255.0
+
+cpu: 4
+mem_max: 8

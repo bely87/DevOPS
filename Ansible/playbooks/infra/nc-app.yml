@@ -1,0 +1,16 @@
+- hosts: nc-app
+  gather_facts: yes
+  become: yes
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/nginx.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/glusterfs.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/lvm.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/zabbix.yml"
+
+  roles:
+    - { role: lvm, tags: create }
+    - { role: glusterfs, tags: create_prod }
+    - { role: user, tags: create }
+    - { role: php, tags: install, config }
+    - { role: firewalld, tags: config}
+    - { role: nginx, tags: install, config }

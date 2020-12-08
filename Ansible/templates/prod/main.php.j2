@@ -1,0 +1,20 @@
+<?php
+return [
+    'aliases' => [
+        '@bower' => '@vendor/bower-asset',
+        '@npm'   => '@vendor/npm-asset',
+    ],
+    'vendorPath' => dirname(dirname(__DIR__)) . '/vendor',
+    'components' => [
+        'db' => [
+            'class' => 'yii\db\Connection',
+            'dsn' => 'mysql:host={{ app_yii_mysql_host }};dbname={{ app_yii_mysql_dbname }}',
+            'username' => '{{ app_yii_mysql_username }}',
+            'password' => '{{ app_yii_mysql_password }}',
+            'charset' => 'utf8',
+        ],
+        'cache' => [
+            'class' => 'yii\caching\FileCache',
+        ],
+    ],
+];

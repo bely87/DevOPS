@@ -1,0 +1,41 @@
+- name: Copy a folder recursively where the source is on the remote host
+  win_copy:
+    src: "{{ item.target }}"
+    dest: 'c:\tmp\{{ item.name }}.bak'
+    remote_src: yes
+    force: yes
+  become: yes
+  vars:  # not you can also just set these as host vars instead
+    ansible_become_method: runas
+    ansible_become_user: '{{ domain_user }}'
+    ansible_become_pass: '{{domain_password}}'
+  with_items: "{{ db_import_database_Auriga }}"
+  tags: create_Auriga
+
+- name: Create directory structure
+  win_file:
+    path: 'C:\Data\'
+    state: 'directory'
+  tags: create
+  
+- name: delete SQL Auriga
+  win_shell: Invoke-Sqlcmd -Query "DROP DATABASE {{ item.name }}"
+  with_items: "{{ db_import_database_Auriga }}"
+  ignore_errors: yes
+  tags: create_Auriga
+
+- name: RESTORE SQL Auriga
+  win_shell: Invoke-Sqlcmd -Query "RESTORE DATABASE {{ item.name }} FROM DISK = 'c:\tmp\{{ item.name }}.bak' WITH MOVE '{{ item.name }}_Test_01' TO 'C:\Data\{{ item.name }}.mdf', MOVE '{{ item.name }}_Test_02' TO 'C:\Data\{{ item.name }}.ndf', MOVE '{{ item.name }}_Test_01_log' TO 'C:\Data\{{ item.name }}_Log.ldf'" -ServerInstance '(local)' -QueryTimeout 1000
+  with_items: "{{ db_import_database_Auriga }}"
+  tags: create_Auriga
+
+- name: delete SQL 1c
+  win_shell: Invoke-Sqlcmd -Query "DROP DATABASE {{ item.name }}"
+  with_items: "{{ db_import_database_1c }}"
+  ignore_errors: yes
+  tags: create_1c
+
+- name: Create SQL 1c
+  win_shell: Invoke-Sqlcmd -Query "CREATE DATABASE {{ item.name }}" -ServerInstance '(local)' -QueryTimeout 1000
+  with_items: "{{ db_import_database_1c }}"
+  tags: create_1c

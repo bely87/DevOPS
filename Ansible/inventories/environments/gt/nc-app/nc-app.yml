@@ -1,0 +1,24 @@
+app_yii_mysql_host: "{{ hostvars[groups['galera-db'][0]].ansible_host }}"
+app_yii_mysql_dbname: nextcar_yii2
+app_yii_mysql_username: nextcar_yii2
+app_yii_mysql_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          65306538653431613631396632316238303834633464646262393962613938343763653663653635
+          3133663663376237623864343733656634613835346661330a336663306233363533376361356464
+          35613839326435333663623635646266356632303231656634316266333835656639316336656435
+          3839316563393762340a376437343561303831633134383863396337643835356634323664623564
+          3263
+app_yii_git_clone: /var/lib/jenkins/workspace/gt-nextcar-app-git/
+php_edit_file:
+  - { file: "{{ php_file_root }}/php.ini", search: "display_errors", value: "display_errors = Off"}
+  - { file: "{{ php_file_root }}/php.ini", search: "expose_php", value: "expose_php = Off"}
+  - { file: "{{ php_file_root }}/php.ini", search: "allow_url_fopen", value: "allow_url_fopen = Off"}
+
+app_yii_cookieValidationKey:
+  - { name: "admin", key: "4dLOHfJFIl_HvGZsop2MPaYLyut2lJER" }
+  - { name: "client", key: "XdvQpmVvYJaBP74m6KAJV0lZoHdK3Q7q" }
+  - { name: "dealer", key: "AfCqDtzbwuNY9-mDoeBOG8THgAMSfOu_" }
+  - { name: "frontend", key: "65kBzxMqwv0y5fD1IdqXJ2Nm-FLFhk8R" }
+
+php_yii_start: /opt/rh/rh-php71/root/usr/bin/php
+app_rpm_name: nextcar-dev.noarch.rpm	

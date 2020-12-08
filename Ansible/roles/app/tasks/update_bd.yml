@@ -1,0 +1,3 @@
+- name: YII2 update mysql BD
+  command: "{{ php_yii_start }} {{ app_yii2_www }}/yii migrate  --interactive=0"
+  tags: app-commit

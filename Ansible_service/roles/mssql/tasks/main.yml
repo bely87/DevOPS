@@ -1,0 +1,6 @@
+- name: Edit file config
+  include: install.yml
+  tags: create
+
+- name: Create DB
+  include: creatDB.yml

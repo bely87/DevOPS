@@ -1,0 +1,59 @@
+
+user bitrix;
+worker_processes 4;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+multi_accept on;
+}
+
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  off;
+error_log /var/log/nginx/error.log crit;
+
+    sendfile        on;
+client_max_body_size 20480m;
+client_body_timeout 10;
+    tcp_nopush     on;
+tcp_nodelay on;
+
+    keepalive_timeout  65;
+keepalive_requests 100;
+
+    gzip  on;
+gzip_disable "msie6";
+gzip_vary on;
+gzip_proxied any;
+gzip_comp_level 6;
+gzip_min_length 1100;
+gzip_buffers 16 8k;
+gzip_http_version 1.1;
+gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript;
+open_file_cache max=200000 inactive=20s;
+open_file_cache_valid 30s;
+open_file_cache_min_uses 2;
+open_file_cache_errors on;
+fastcgi_buffers 256 16k;
+fastcgi_buffer_size 128k;
+fastcgi_connect_timeout 3s;
+fastcgi_send_timeout 120s;
+fastcgi_read_timeout 120s;
+fastcgi_busy_buffers_size 256k;
+fastcgi_temp_file_write_size 256k;
+reset_timedout_connection on;
+server_names_hash_bucket_size 100;
+
+    include /etc/nginx/conf.d/*.conf;
+}

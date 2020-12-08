@@ -1,0 +1,21 @@
+---
+# defaults file for satellite
+satellite_url: |
+  {% if surl == "dev_7.5"%}
+  http://satellite2.tsed.orglot.office/pub/register_on_satellite2_rhel75_dev_las739gh
+  {% elif ansible_distribution_version == "7.4" %}
+  http://satellite2.tsed.orglot.office/pub/register_on_satellite2_rhel74_dev_dnyc8v83
+  {% elif ansible_distribution_version == "7.5" %}
+  http://satellite2.tsed.orglot.office/pub/register_on_satellite2_rhel75_dev_las739gh
+  {% else %}
+  http://satellite2.tsed.orglot.office/pub/register_on_satellite2_rhel7_dev_ses65zpt
+  {% endif %}
+
+# satellite2.tsed.orglot.office
+satellite_host: 10.200.80.40
+
+force: no
+
+sattelite_reg_force: no
+
+surl: ""

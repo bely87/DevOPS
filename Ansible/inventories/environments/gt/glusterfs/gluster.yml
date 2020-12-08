@@ -1,0 +1,4 @@
+# peer_detach: reinit
+reinit: 0
+
+glusterfs_arbiter: 0

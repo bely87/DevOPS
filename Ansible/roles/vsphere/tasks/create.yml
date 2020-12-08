@@ -1,0 +1,84 @@
+- set_fact:
+    # vm folder
+    folder: "{{ vsphere_dc }}/vm{{ vsphere_folder }}"
+
+    # array of nics
+    networks:
+    - name: "{{ vshpere_port_groups.0.name }}"
+      ip: "{{ ansible_host }}"
+      netmask: "{{ vshpere_port_groups.0.netmask }}"
+      gateway: "{{ vshpere_port_groups.0.gateway }}"
+    # default hardware dict
+    hardware:
+      hotadd_cpu: True
+      hotadd_memory: True
+
+- set_fact:
+    # add second nic
+    networks:
+    - "{{ networks.0 }}"
+    - name: "{{ vshpere_port_groups.1.name }}"
+      ip: "{{ cluster_ip }}"
+      netmask: "{{ vshpere_port_groups.1.netmask }}"
+  when: cluster_ip is defined
+
+- set_fact:
+    #  add memory
+    hardware: "{{ hardware | combine({'memory_mb': mem_max*1024}) }}"
+  when: mem_max is defined
+
+- set_fact:
+    # add cpu
+    hardware: "{{ hardware | combine({'num_cpus': cpu}) }}"
+  when: cpu is defined
+
+- debug:
+    msg: "{{ vsphere_dc }}/vm{{ vsphere_folder }}"
+
+- name: "Create/delete VM"
+  vmware_guest:
+    hostname: "{{ vsphere_api_address }}"
+    username: "{{ vsphere_credential.user }}"
+    password: "{{ vsphere_credential.password }}"
+    validate_certs: no
+    datacenter: "{{ vsphere_dc }}"
+    esxi_hostname: "{{ vsphere_esxi_host }}"
+    name: "{{ inventory_hostname_short }}"
+    folder: "{{ folder }}"
+    state: "{{ state }}"
+    force: "{{ force }}"
+
+    template: "{{ vsphere_template }}"
+    disk: "{{ disk + additional_disks }}"
+    networks: "{{ networks }}"
+    customization:
+      dns_servers: "{{ nameservers }}"
+    hardware: "{{ hardware }}"
+  delegate_to: localhost
+
+- name: poweron
+  vmware_guest:
+    hostname: "{{ vsphere_api_address }}"
+    username: "{{ vsphere_credential.user }}"
+    password: "{{ vsphere_credential.password }}"
+    validate_certs: no
+    datacenter: "{{ vsphere_dc }}"
+    esxi_hostname: "{{ vsphere_esxi_host }}"
+    name: "{{ inventory_hostname_short }}"
+    folder: "{{ folder }}"
+    state: poweredon
+  delegate_to: localhost
+  when: state == 'present'
+  tags: power
+
+- name: Wait for ssh port
+  local_action:
+    module: wait_for
+    host: "{{ ansible_host }}"
+    port: 22
+    search_regex: OpenSSH
+    delay: 15
+    timeout: 300
+  become: no
+  when: state == 'present' and group_names[-1].find('win') == -1
+#

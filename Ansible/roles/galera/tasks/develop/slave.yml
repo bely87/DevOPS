@@ -1,0 +1,3 @@
+---
+# Bootstrapping slave:
+# 1. slave must bootstrapped using GTID current_pos

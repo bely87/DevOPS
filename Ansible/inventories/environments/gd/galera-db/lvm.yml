@@ -1,0 +1,14 @@
+vm_config:
+  vgs:
+  - name: "vgdata_mysql"
+    disks:
+    - alias: "mysql"
+      name: "sdc"
+      size: "100"
+    lvs:
+    - name: "mysqllog"
+      size: "50"
+      m_point: "/var/log/mysql"
+    - name: "mysqldata"
+      size: "50"
+      m_point: "/var/lib/mysql"

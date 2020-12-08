@@ -1,0 +1,23 @@
+- name: install rpm
+  include: update_app.yml
+  tags: app-commit, app-create
+
+#- name: Copy app
+#  include: copy.yml
+#  tags: app-commit, app-create
+
+- name: Edit file config
+  include: edit_file_config.yml
+  tags: app-commit, app-create
+
+- name: Create link image
+  include: link.yml
+  tags: app-commit, app-create
+
+- name: Edit file config
+  include: create_file.yml
+  tags: app-commit, app-create
+
+- name: Update BD mysql
+  include: update_bd.yml
+  tags: app-commit, app-create

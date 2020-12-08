@@ -1,0 +1,62 @@
+---
+- name: stat grastate.dat
+  stat:
+    path: /var/lib/mysql/grastate.dat
+  register: grastate
+  when: first_db_instance is defined
+
+- name: make safe to bootstrap
+  lineinfile:
+    path: /var/lib/mysql/grastate.dat
+    regexp: safe_to_bootstrap
+    line: 'safe_to_bootstrap: 1'
+  when: first_db_instance is defined and grastate.stat.exists
+
+- name: start arbitrator
+  service:
+    name: "garbd_{{ galera_wsrep_cluster_name }}"
+    state: stopped
+  when: inventory_hostname in groups[ 'arbitrator' ]
+
+- name: stop nodes 2..n
+  service:
+    name: mariadb
+    state: stopped
+    enabled: false
+  when: first_db_instance is not defined and inventory_hostname not in groups[ 'arbitrator' ]
+  run_once: yes
+  with_items:
+  - "{{ play_hosts_whihtout_arb  }}"
+  delegate_to: "{{ item }}"
+
+
+- name: stop node 1
+  service:
+    name: mariadb
+    state: stopped
+    enabled: false
+  when: first_db_instance is defined
+
+- name: galera_new_cluster on node 1
+  command: galera_new_cluster
+  when: first_db_instance is defined
+
+
+- name: start nodes 2..n
+  service:
+    name: mariadb
+    state: started
+    enabled: false
+  when: first_db_instance is not defined and inventory_hostname not in groups[ 'arbitrator' ]
+
+  run_once: yes
+  with_items:
+  - "{{ play_hosts_whihtout_arb  }}"
+  delegate_to: "{{ item }}"
+
+
+- name: start arbitrator
+  service:
+    name: "garbd_{{ galera_wsrep_cluster_name }}"
+    state: restarted
+  when: inventory_hostname in groups[ 'arbitrator' ]

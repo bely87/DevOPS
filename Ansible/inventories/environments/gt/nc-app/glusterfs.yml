@@ -1,0 +1,8 @@
+glusterfs_mountPoint: "/mnt/data/files"
+glusterfs_mountPoint_ip: "10.205.46.55:/vol"
+glusterfs_mountPoint_ip_bk: "10.205.46.55"
+
+# peer_detach: reinit
+reinit: 0
+
+glusterfs_arbiter: 0

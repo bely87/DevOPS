@@ -1,0 +1,17 @@
+---
+- name: Find config files
+  shell: find {{nginx_conf_dir}}/conf.d -maxdepth 1 -type f -name '*.conf' -exec basename {} \;
+  register: exist
+  changed_when: False
+
+- block:
+  - set_fact: should_exist="[]"
+  - set_fact: should_exist="{{should_exist}} + [ '{{ item.dest.split('/')[-1] }}' ]"
+    with_items: "{{ nginx_templates }}"
+
+- name: Remove unmanaged config files
+  file:
+    name: "{{nginx_conf_dir}}/conf.d/{{ item }}"
+    state: absent
+  with_items: "{{ exist.stdout_lines | default([]) }}"
+  when: remove and item not in should_exist

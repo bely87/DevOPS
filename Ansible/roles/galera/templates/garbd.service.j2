@@ -1,0 +1,21 @@
+# Systemd service file for garbd_{{ galera_wsrep_cluster_name }}
+
+[Unit]
+Description=Galera Arbitrator Daemon
+After=network.target syslog.target
+
+[Install]
+WantedBy=multi-user.target
+Alias=garbd_{{ galera_wsrep_cluster_name }}.service
+
+[Service]
+User=nobody
+EnvironmentFile=/etc/sysconfig/garb_{{ galera_wsrep_cluster_name }}
+ExecStart=/usr/bin/garb-{{ galera_wsrep_cluster_name }}-systemd start
+
+# Use SIGINT because with the default SIGTERM
+# garbd fails to reliably transition to 'destroyed' state
+KillSignal=SIGINT
+
+TimeoutSec=2m
+PrivateTmp=false

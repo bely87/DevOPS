@@ -1,0 +1,6 @@
+# zabbix_proxy_list: ['zabbix-proxy1.tsed.orglot.office','zabbix-proxy2.tsed.orglot.office','zabbix-dev-proxy1.tsed.orglot.office','zabbix-devops.oets.orglot.office']
+zabbix_templates: ['Template_linux_base','Template_Iostat-All-Disk-Utilization', 'Template App MySQL', '0rglot-linux-mysql','Template_Galera_MySQL',]
+zabbix_macros:
+- { name: "CLUSTER_SIZE", value: "{{ groups['galera-db'] | length + groups['arbitrator'] | length }}"}
+- { name: "MAX_PROC", value: 400 }
+- { name: "MAX_CONNECTIONS", value: "{{zabbix_max_connections}}"}

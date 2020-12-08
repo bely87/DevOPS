@@ -1,0 +1,8 @@
+- hosts: win-fs
+  gather_facts: no
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/fs.yml"
+
+  roles:
+    - role: fs
+      tags: create

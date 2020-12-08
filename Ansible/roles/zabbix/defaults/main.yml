@@ -1,0 +1,79 @@
+---
+first_db_instance: 0
+zabbix_hostname_short: "{{ inventory_hostname_short }}"
+zabbix_server_url: http://zabbix.tsed.orglot.office/zabbix
+
+zabbix_home_dir: /var/lib/zabbix
+zabbix_conf_dir: /etc/zabbix/
+zabbix_user_param_dir: "{{ zabbix_conf_dir }}/zabbix_agentd.d"
+zabbix_scripts_dir: "{{ zabbix_home_dir }}/bin"
+zabbix_tmp_dir: "{{ zabbix_home_dir }}/tmp"
+zabbix_global_path: "{{ lookup('env','PWD') }}/inventories/global/{{ group_names[-1] }}"
+
+zabbix_repo: ORGLOT_OFFICE_Zabbix_Zabbix_3_2_release_for_RHEL7_-_x86_64
+
+# zabbix-dev-proxy1.tsed.orglot.office'should be utilized for DC1 and DC2
+# zabbix-dev-proxy2.tsed.orglot.office not used (с) Sergey Yunk
+zabbix_proxy_list:
+- name: 'zabbix-proxy1.tsed.orglot.office'
+  dc: "1"
+- name: 'zabbix-proxy2.tsed.orglot.office'
+  dc: "2"
+- name: 'zabbix-proxy3.oets.orglot.office'
+  dc: "3"
+- name: 'zabbix-dev-proxy1.tsed.orglot.office'
+  dc: "1"
+- name: 'zabbix-dev-proxy2.tsed.orglot.office'
+  dc: "2"
+- name: 'zabbix-devops.oets.orglot.office'
+  dc: "3"
+- name: 'ga-zabbix-proxy.ga.stoloto.su'
+  dc: "3"
+
+
+zabbix_user_groups: []
+
+install_zabbix_agent: 1
+
+zabbix_conf_files: []
+
+zabbix_conf_templates: []
+
+zabbix_proxy: ''
+zabbix_max_connections: 500
+zabbix_mysql_custom_userparameter:
+- |
+    #custom configs here
+zabbix_templates:
+- Template_linux_base
+- Template_Iostat-All-Disk-Utilization
+
+zabbix_user:
+  name: ansible
+  password_prod: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          34663462613339633766386165366462313439363136316634303266386666373135646463613738
+          6134613432636538343837323265376162393138393138630a626666373835633634643531353339
+          36616361326661383237333735363735373135386433396166363563323930383634616332323432
+          6661616164323232350a363931326235376539323035623934653033373137303138343336623564
+          6234
+  password_test: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          65663033303830623931326363376630393131316533333466376633613538323637303837356163
+          6663383465623666656138643764626537346436346466310a343632313162646638393161313363
+          31306330653331646633343766383662613162336630656462303037303338353466333436636561
+          6665363339626130390a313561323931366361386562623331356165376438623230626434333436
+          6363
+
+zabbix_mysql: 0
+zabbix_mysql_user: zabbix
+zabbix_mysql_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          38653830623839613438633030316439313835356630326439366530613638396230373738383133
+          3633653231333264306632663933333538326433323765370a343861346332333634393663643561
+          65383332373930343631613661383663636433306435323830336539643863373336353165666535
+          3362356230336332380a303234353731383364393265353766326565363364323035653566363061
+          64356532383765613934343865303564363066313739393039323463326663626537
+
+# zabbix_macros:
+# - { name: "MAX_PROC", value: 210 }

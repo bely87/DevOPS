@@ -1,0 +1,13 @@
+---
+# defaults file for idm-reg
+# idm_reg_url: "http://satellite2.tsed.orglot.office/pub/registration-on-idm-main.sh"
+# idm_reg_sh: "/tmp/idm_host_enrolling.sh"
+# idm_reg_tmp: "/tmp/.pwd"
+# idm_reg_sh_tmp: "/tmp/idm_reg_tmp.sh"
+
+join_ipa_host: idm1.tsed.orglot.office
+join_ipa_domain: tsed.orglot.office
+join_ipa_realm: "{{ join_ipa_domain|upper }}"
+ORGLOT_USER: "orglot"
+ORGLOT_USER_ID: "888"
+idm_force: "no"

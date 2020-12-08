@@ -1,0 +1,13 @@
+- hosts: nc-lb
+  gather_facts: yes
+  become: yes
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/nginx.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/keepalived.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/zabbix.yml"
+
+  roles:
+    - { role: keepalived, tags: create }
+    - { role: nginx, tags: install, config }
+    - { role: firewalld, tags: config}
+#    - { role: zabbix, tags: install}

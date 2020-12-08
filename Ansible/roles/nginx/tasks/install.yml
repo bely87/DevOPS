@@ -1,0 +1,12 @@
+---
+- name: install nginx package
+  yum:
+    name: "nginx{{nginx_version}}"
+    state: present
+    enablerepo: "{{ nginx_repo }}"
+
+- name: start & enable nginx
+  service:
+    name: nginx
+    state: started
+    enabled: no

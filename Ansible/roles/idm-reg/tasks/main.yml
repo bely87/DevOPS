@@ -1,0 +1,36 @@
+---
+# tasks file for idm-reg
+- name: install nscd
+  yum:
+    name: nscd
+    state: installed
+  when: ansible_distribution=="RedHat"
+
+- name: check idm_registration
+  shell: 'id admin|grep 1860000000 && grep sss /etc/nsswitch.conf'
+  register: idmr
+  failed_when: idmr.rc==10
+
+- name: registration block for idm
+  when: idmr.rc!=0 or idm_force=="yes"
+  block:
+
+  - name: Set our authorized key for root, took from file
+    become: yes
+    authorized_key:
+      user: root
+      state: present
+      key: "{{ lookup('file', lookup('env','PWD')+ '/keys/' + ansible_user + '.pub') }}"
+
+  - name: Registering host on IDM
+    include: registration.yml
+    remote_user: root
+    # become: yes
+    # become_user: root
+
+  - name: Remove our authorized key for root, took from file
+    become: yes
+    authorized_key:
+      user: root
+      state: absent
+      key: "{{ lookup('file', lookup('env','PWD')+ '/keys/' + ansible_user + '.pub') }}"

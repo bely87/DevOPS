@@ -1,0 +1,28 @@
+---
+- name: check directories
+  file:
+    path: "{{ item.dest | dirname }}"
+    state: directory
+    recurse: yes
+  with_items:
+  - "{{ nginx_ssl_files }}"
+  - "{{ nginx_templates }}"
+
+- name: deploy certs for ssl sites
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items: "{{ nginx_ssl_files }}"
+
+- name: Generate dhparam for SSL
+  shell: "openssl dhparam -outform pem -rand /dev/urandom -out {{ nginx_ssl_files.0.dest | dirname }}/dhparam.pem 2048"
+  when: nginx_ssl_files|length > 0
+
+- name: Create the configurations for independent config file via template
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    backup: yes
+  with_items: "{{ nginx_templates }}"
+  notify:
+  - reload nginx

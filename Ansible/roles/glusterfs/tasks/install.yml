@@ -1,0 +1,22 @@
+---
+- name: install GlusterFS  package
+  yum:
+    name: "glusterfs-client"
+    state: present
+    # disablerepo: "*"
+    enablerepo: "*"
+
+- name: Create Folder
+  file: path="{{ glusterfs_mountPoint }}" state=directory
+
+- name: Edit File /etc/fstab
+  become: True
+  mount:
+    name: none
+    path: "{{ glusterfs_mountPoint }}"
+    src: "{{ glusterfs_mountPoint_ip }}"
+    fstype: glusterfs
+    opts: defaults,backupvolfile-server={{ glusterfs_mountPoint_ip_bk }},_netdev
+    dump: 0
+    passno: 0
+    state: present

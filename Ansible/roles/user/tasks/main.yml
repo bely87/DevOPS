@@ -1,0 +1,9 @@
+- name: Add user linux
+  when: group_names[-1] == "nc-app"
+  include: linux.yml
+  tags: create
+
+- name: Add user mysql
+  when: group_names[-1] == "galera-db"
+  include: galera-db.yml
+  tags: app-create

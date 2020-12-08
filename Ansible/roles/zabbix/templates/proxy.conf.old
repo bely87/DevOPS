@@ -1,0 +1,9 @@
+Server={%- for item in zabbix_proxy_list -%}
+{{ item }}
+{%- if not loop.last -%},{%- endif -%}
+{%- endfor %}
+
+ServerActive={%- for item in zabbix_proxy_list -%}
+{{ item }}
+{%- if not loop.last -%},{%- endif -%}
+{%- endfor %}

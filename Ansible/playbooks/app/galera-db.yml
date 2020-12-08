@@ -1,0 +1,11 @@
+- name: playbook galera-db
+  hosts: galera-db
+  run_once: yes
+  gather_facts: yes
+  become: yes
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/nc-app/nc-app.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/user.yml"
+
+  roles:
+    - { role: user, tags: app-create }

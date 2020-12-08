@@ -1,0 +1,4 @@
+- name: Synchronization Git local to remote
+  synchronize:
+    src: 	"{{ app_yii_git_clone }}"
+    dest: "{{ app_yii2_www }}"

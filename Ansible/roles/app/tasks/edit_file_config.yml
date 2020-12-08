@@ -1,0 +1,34 @@
+- name: Edit files
+  template:
+    src={{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/app/{{ item }}.j2
+    dest={{ app_yii2_www }}/common/config/{{ item }}
+  with_items: "{{ app_yii2_edit_file }}"
+  tags: app-commit
+
+- name: chown -R bitrix:bitrix "{{ app_yii2_www }}"
+  file:
+    path: "{{ app_yii2_www }}"
+    owner: bitrix
+    group: bitrix
+    recurse: yes
+  tags: app-commit
+
+- name: Selinux httpd_can_network_connect
+  command: setsebool -PV httpd_can_network_connect 1
+  tags: app-commit
+
+- name: Selinux httpd_can_network_relay
+  command: setsebool -PV httpd_can_network_relay 1
+  tags: app-commit
+
+- name: Selinux rdit
+  command: semanage fcontext -a -t httpd_sys_rw_content_t "{{ app_yii2_www }}"
+  tags: app-commit
+
+- name: Selinux rdit
+  command: semanage fcontext -a -t httpd_sys_rw_content_t "{{ app_yii2_www }}(/.*)?"
+  tags: app-commit
+
+- name: Restore SELinux labels on filesystem tree
+  command: /sbin/restorecon -R "{{ app_yii2_www }}"
+  tags: app-commit

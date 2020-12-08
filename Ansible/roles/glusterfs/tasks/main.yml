@@ -1,0 +1,4 @@
+- include_tasks: install.yml
+  when:
+  - env == 'prod'
+  tags: install

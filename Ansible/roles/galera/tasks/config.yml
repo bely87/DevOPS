@@ -1,0 +1,102 @@
+---
+
+- name: 1111 firewall rules
+  command: "{{ item }}"
+  with_items:
+    - "systemctl enable firewalld.service"
+    - "firewall-cmd --new-service=mysql --permanent"
+    - "firewall-cmd --new-service=zabbix-agent --permanent"
+    - "firewall-cmd --service=mysql --add-port=3306/tcp --permanent"
+    - "firewall-cmd --zone=public --add-service=mysql --add-service=zabbix-agent --permanent"
+    - "firewall-cmd --service=zabbix-agent --add-port=10050/tcp --permanent"
+    - "firewall-cmd --service=zabbix-agent --add-port=10050/udp --permanent"
+    - "firewall-cmd --zone=public --add-service=mysql --permanent"
+    - "firewall-cmd --reload"
+    - "firewall-cmd --new-service=galera --permanent"
+    - "firewall-cmd --service=galera --add-port=3306/tcp --add-port=4567/tcp --add-port={{galera_wsrep_cluster_port}}/udp --add-port={{galera_wsrep_cluster_port}}/tcp --add-port=4444/tcp --permanent"
+    - "firewall-cmd --new-zone=galeranet --permanent"
+    - "firewall-cmd --zone=galeranet --add-source={{ galera_wsrep_cluster_net }} --permanent"
+    - "firewall-cmd --zone=galeranet --add-service=mysql --add-service=galera --permanent"
+    - "firewall-cmd --reload"
+  ignore_errors: yes
+
+# Galera/MySQL nodes block -----------------------------------------------------------
+- block:
+  - name: 1011 check folders
+    file:
+      path: "{{ item }}"
+      state: directory
+      owner: mysql
+      group: mysql
+      recurse: yes
+    with_items: "{{ mysql_directories }}"
+
+  - debug:
+      var: cluster_ip
+
+  - name: 1011 edit /etc/systemd/system/mariadb.service.d/limits.conf
+    blockinfile:
+      path: /etc/systemd/system/mariadb.service.d/limits.conf
+      create: yes
+      state: present
+      content: |
+        [Service]
+        LimitNOFILE=infinity
+        LimitMEMLOCK=infinity
+    notify: reload mariadb
+
+  - name: 1011 configure vm.swappiness
+    sysctl:
+      name: vm.swappiness
+      sysctl_file: '/etc/sysctl.d/swappiness.conf'
+      value: '1'
+      state: present
+      sysctl_set: yes
+      reload: yes
+    when: ansible_distribution == "RedHat" and ansible_distribution_major_version == "7"
+
+  - name: 1011 Disable mariadb autostart
+    systemd:
+      name: mariadb
+      enabled: no
+      daemon_reload: yes
+
+  - name: 1011 Disable mysql autostart
+    command: >
+      chkconfig mysql off
+
+  when: inventory_hostname not in groups.arbitrator|default([])
+
+# Arbitrator block -------------------------------------------------------------
+- block:
+  - name: 0100 copy garb-systemd binary
+    copy:
+      src: /usr/bin/garb-systemd
+      dest: /usr/bin/garb-{{ galera_wsrep_cluster_name }}-systemd
+      mode: u+x,g+x,o+x
+      remote_src: yes
+
+  - name: 0100 add garbd service
+    template:
+      src: garbd.service.j2
+      dest: "/etc/systemd/system/garbd_{{ galera_wsrep_cluster_name }}.service"
+
+
+  - name: 0100 add garb config
+    template:
+      src: sysconfig/garb.j2
+      dest: "/etc/sysconfig/garb_{{ galera_wsrep_cluster_name }}"
+
+  - name: 0100 garbd daemon reload
+    systemd:
+      name: "garbd_{{ galera_wsrep_cluster_name }}"
+      daemon_reload: yes
+
+  - name: 0100 start garb service and disable autostart
+    service:
+      name: "garbd_{{ galera_wsrep_cluster_name }}"
+      state: started
+      enabled: no
+    ignore_errors: yes
+
+  when: inventory_hostname in groups.arbitrator|default([])

@@ -1,0 +1,5 @@
+#!/bin/bash
+find /backup -mtime +3 -delete
+/usr/local/bin/mysql_slave_backup.sh
+# Do not forget to change {backupdir} to correct path
+# This file must be placed at /etc/cron.hourly/backupMaria

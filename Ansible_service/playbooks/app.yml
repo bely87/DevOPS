@@ -1,0 +1,12 @@
+- hosts:
+  - win-1c
+  - win-appls
+  gather_facts: no
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/app.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/win-db/mssql.yml"
+
+  roles:
+    - role: app
+    - role: iis
+      when: "'win-1c' in group_names"

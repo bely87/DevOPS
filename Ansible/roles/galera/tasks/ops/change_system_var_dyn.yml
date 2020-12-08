@@ -1,0 +1,43 @@
+---
+# This play works only with dynamic variables, please check the variable at https://mariadb.com/kb/en/library/server-system-variables/
+# this play has the following variables:
+# db_system_var_key - mariadb system variable key to be changed at mysql server
+# db_system_var_key_cnf - mariadb system variable key to be changed in .cnf file
+# db_system_var_value - mariadb system variable value to be changed to
+# cnf_filename - either mariadb.cnf or galera.cnf
+# the following variables will be created automatically:
+# db_system_var_old_value - mariadb system variable value that will be changed
+# key_matched - whether the key is matched somewhere else
+# example run ansible-playbook playbooks/change_system_var_dyn.yml -i inventories/dev-bk-bet.ini -l shard1 -v --extra-vars "db_system_var_key=long_query_time db_system_var_value=0.5 cnf_filename=mariadb.cnf"
+
+# - hosts: all
+#   become: yes
+#   gather_facts: yes
+#
+#   tasks:
+    - name: change parameter at mysql runtime
+      shell: "mysql -e 'select @@{{ db_system_var_key }}';"
+      register: db_system_var_old_value
+
+    - set_fact:
+      logrotate_mysql_slow_log_file: "{{ db_system_var_old_value.stdout }}"
+    - debug: msg="{{ db_system_var_old_value.stdout }} \n Extra info is RAM - {{ ansible_memtotal_mb }} \n cpu threads count {{ ansible_processor_threads_per_core }} \n cpu count {{ ansible_processor_vcpus }}"
+    - pause: prompt="The old value of {{ db_system_var_key }} is {{ db_system_var_old_value.stdout }}, new value {{ db_system_var_value }} will be applied dynamically. Change?"
+
+    - name: register mariadb variable already exist regex
+      shell: "grep -o -P --exclude='{{ cnf_filename }}*' '^{{ db_system_var_key_cnf }}' /etc/my.cnf.d/* | wc -l"
+      register: key_matched
+
+    - name: check if mariadb variable already exist in files except specified
+      fail: msg="mariadb system variable {{ db_system_var_key_cnf }} already exits at /etc/my.cnf.d/ directory except /etc/my.cnf.d/{{ cnf_filename }} please remove lines containing it. Please run grep -o -P --exclude='{{ cnf_filename }}*' '^{{ db_system_var_key_cnf }}' /etc/my.cnf.d/* on the servers"
+      when: key_matched.stdout != "0"
+
+    - name: change parameter at mysql runtime
+      shell: "mysql -e 'set @@global.{{ db_system_var_key }}={{ db_system_var_value }}';"
+
+    - name: change parameter in cnf file
+      lineinfile:
+        dest: "/etc/my.cnf.d/{{ cnf_filename }}"
+        state: present
+        regexp: '^{{ db_system_var_key_cnf }}'
+        line: '{{ db_system_var_key_cnf }}={{ db_system_var_value }}'

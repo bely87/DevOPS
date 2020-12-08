@@ -1,0 +1,49 @@
+---
+# если вдруг остались нерешенные зависимости вызывающие ошибку установки новых пакетов
+- name: 1111 yum-complete-transaction
+  command: >
+    yum-complete-transaction -y
+
+
+- block:
+
+
+  - name: 1111 register repos_mariadb regex
+    shell: 'subscription-manager repos --list | grep -i -A4 _mariadb_ | grep "Repo ID\|Enabled"'
+    register: repos_mariadb
+
+  - debug: msg="{{ repos_mariadb.stdout }}"
+
+  - name: 1011 Install packages on mysql/galera nodes
+    yum:
+      name: "{{ item }}"
+      state: present
+      disablerepo: "{{ galera_percona_repo }}"
+      enablerepo: "{{ galera_mariadb_repo }}"
+      # skip_broken: yes
+    with_items:
+      - "{{ galera_nodes_pkgs }}"
+  when: inventory_hostname not in groups.arbitrator|default([])
+
+- block:
+
+
+  - name: 1111 Install percona packages
+    yum:
+      name: "{{ item }}"
+      enablerepo: "{{ galera_percona_repo}}"
+      disable_gpg_check: yes
+      state: present
+    with_items:
+      - "{{ galera_percona_pkgs }}"
+
+
+  - name: 1100 Install packages for galera nodes
+    yum:
+      name: "{{ item }}"
+      enablerepo: "{{ galera_mariadb_repo}}"
+      disable_gpg_check: yes
+      state: present
+    with_items:
+      - "{{ galera_all_pkgs }}"
+    when: not mysql_only

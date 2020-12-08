@@ -1,0 +1,13 @@
+- hosts: all
+  gather_facts: no
+  become_method: runas
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/domain.yml"
+
+  roles:
+    - role: resize
+      tags: create
+
+    - role: domain
+      tags: create
+#      when: group_names[-1].find('win') == -1

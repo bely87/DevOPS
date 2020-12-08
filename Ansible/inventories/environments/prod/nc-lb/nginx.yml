@@ -1,0 +1,30 @@
+nginx_ssl_files:
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/intermediate_pem_thawte_sslwildcard_1.crt", dest: "/etc/nginx/ssl/intermediate_pem_thawte_sslwildcard_1.crt" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/next_car_2019_04_03.crt", dest: "/etc/nginx/ssl/{{ nginx_ssl_certificate }}" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/next.carssl.conf", dest: "/etc/nginx/ssl/next.carssl.conf" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/root_pem_thawte_sslwildcard_1.crt", dest: "/etc/nginx/ssl/root_pem_thawte_sslwildcard_1.crt" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/server.key", dest: "/etc/nginx/ssl/{{ nginx_ssl_certificate_key }}" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/nextcar.cer", dest: "/etc/nginx/ssl/nextcar.crt" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/nextcar.key", dest: "/etc/nginx/ssl/nextcar.key" }
+  - { src: "{{ lookup('env','PWD') }}/files/infra/ssl/nextcar.pem", dest: "/etc/nginx/ssl/nextcar.pem" }
+
+
+# for all jinja2 features: {% raw %}, etc
+nginx_templates:
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/nginx.conf.j2", dest: "/etc/nginx/nginx.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/nextcar.conf.j2", dest: "/etc/nginx/conf.d/nextcar.conf" }
+  - { src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/nginx/log.format.j2", dest: "/etc/nginx/log.format" }
+
+# for inline yaml
+nginx_configs: []
+#  - { content: "", dest: "" }
+nginx_yii2_domen: "next.car"
+
+remove: 1
+
+nginx_server_name_return: "www.next.car nextcar.ru www.nextcar.ru"
+nginx_server_name: "62.76.157.181 next.car admin.next.car dealer.next.car client.next.car"
+nginx_redirect: "https://next.car"
+
+nginx_ssl_certificate: nextcar.crt
+nginx_ssl_certificate_key: nextcar.key

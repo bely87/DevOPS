@@ -1,0 +1,14 @@
+- hosts: galera-db
+  gather_facts: yes
+  become: yes
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/lvm.yml"
+
+  roles:
+    - role: lvm
+      tags: create
+    - role: galera
+      tags: create_no-prod
+      when: "'prod' != env"
+    - role: firewalld
+      tags: config

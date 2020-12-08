@@ -1,0 +1,74 @@
+upstream myBackend {
+  {% for item in nginx_upstream_host %}
+    server {{hostvars[item]['ansible_host']}}:{{ nginx_upstream_port }} max_fails=1 fail_timeout=10s weight=5;
+  {% endfor %}
+}
+
+server {
+    listen 443 ssl;
+    server_name {{ nginx_server_name_return }};
+    ssl_certificate     /etc/nginx/ssl/{{ nginx_ssl_certificate }};
+    ssl_certificate_key /etc/nginx/ssl/{{ nginx_ssl_certificate_key }};
+    return 301 {{ nginx_redirect }}$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name {{ nginx_server_name }};
+
+    log_subrequest on;
+
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS;
+    keepalive_timeout   60;
+    ssl_certificate     /etc/nginx/ssl/{{ nginx_ssl_certificate }};
+    ssl_certificate_key /etc/nginx/ssl/{{ nginx_ssl_certificate_key }};
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    #ssl_stapling on;
+    #resolver 8.8.8.8;
+    #ssl_trusted_certificate /etc/nginx/ssl/ca.pem;
+    add_header Strict-Transport-Security 'max-age=604800' always;
+
+    location / {
+
+        if ($msec ~ "(.*)\.(.*)") {
+            set $epoch_millis "$1$2";
+        }
+
+        access_log /var/log/nginx/next.car.access.log ncar;
+        error_log /var/log/nginx/next.car.error.log warn;
+
+        #auth_basic "Restricted Content";
+        #auth_basic_user_file /etc/nginx/conf.d/.htpasswd;
+
+        proxy_pass http://myBackend;
+        proxy_pass_header Set-Cookie;
+        proxy_next_upstream error timeout;
+        proxy_set_header Host      $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        add_header X-Proxy-Cache $upstream_cache_status;
+    }
+
+    location /nginx_status {
+	stub_status on;
+	access_log off;
+	allow 127.0.0.1; #Указываем IP адрес, с которого будем опрашивать Nginx с помощью CollectD.
+	deny all;
+    }
+}
+
+server {
+    listen 80 deferred;
+    listen [::]:80 ipv6only=on;
+
+    server_name {{ nginx_server_name_return }};
+
+    if ($scheme = http) {
+        return 301 {{ nginx_redirect }}$request_uri;
+    }
+
+
+}

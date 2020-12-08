@@ -1,0 +1,18 @@
+---
+# defaults file for vsphere
+debug: 0
+# vsphere_disks: 'small' | 'medium' | 'large'
+template: 'small'
+
+additional_disks: []
+
+state: present
+force: "{% if state == 'present' %}no{% else %}yes{% endif %}"
+vsphere_folder: ""
+
+
+disk:
+- size: 1gb
+  datastore: "{{ vsphere_datastore_hdd }}"
+- size: 22gb
+  datastore: "{{ vsphere_datastore_hdd }}"

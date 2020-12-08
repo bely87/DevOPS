@@ -1,0 +1,9 @@
+- hosts: win-db
+  gather_facts: no
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/win-1c/app.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/win-back/back.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/mssql.yml"
+
+  roles:
+    - role: mssql

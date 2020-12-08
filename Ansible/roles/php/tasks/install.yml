@@ -1,0 +1,9 @@
+- name: install php package and submodule
+  yum:
+    name: "{{ php_install_packages }}"
+    state: present
+    # disablerepo: "*"
+    enablerepo: "*"
+
+- name: Create Folder
+  file: path="{{ php_sessions }}" state=directory

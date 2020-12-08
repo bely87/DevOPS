@@ -1,0 +1,11 @@
+- name: Edit file config
+  include: install.yml
+  tags: create
+  
+- pause:
+    seconds: 10
+  tags: create
+
+- name: Create IB 1C
+  include: createDB.yml
+  tags: create

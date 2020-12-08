@@ -1,0 +1,8 @@
+- name: Copy autostart php
+  copy:
+    src: {{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/app/php71.sh.j2
+    dest: /etc/profile.d/php71.sh
+    owner: root
+    group: root
+    mode: '0755'
+  tags: config

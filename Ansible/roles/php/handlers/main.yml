@@ -1,0 +1,8 @@
+- name: start php
+  service: name=rh-php71-php-fpm state=started enabled=yes
+
+- name: start memcached
+  service: name=memcached state=started enabled=yes
+
+- name: Enable php bash command
+  command: scl enable rh-php71 bash

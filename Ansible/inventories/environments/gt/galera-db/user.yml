@@ -1,0 +1,9 @@
+mysql_users:
+  - name: "{{ app_yii_mysql_username }}"
+    host: "{{ hostvars[groups['nc-app'][0]].ansible_host[0:-1] }}%"
+    password: "{{ app_yii_mysql_password }}"
+    grants: "*.*:ALL PRIVILEGES"
+  - name: "auriga"
+    host: "%"
+    password: "jRnVNrESY"
+    grants: "*.*:ALL PRIVILEGES"

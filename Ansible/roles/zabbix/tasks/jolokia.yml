@@ -1,0 +1,33 @@
+---
+- name: Install necessary pkgs
+  yum:
+    name: jq
+    state: present
+
+- name: Creating zabbix home dir and scripts dirs
+  file:
+    path: "{{ zabbix_scripts_dir }}"
+    state: directory
+    recurse: yes
+    owner: zabbix
+    group: zabbix
+
+- name: Copy templates
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+  - src: "jolokia/userparameter_jolokia_amq.conf.j2"
+    dest: "{{ zabbix_user_param_dir }}/userparameter_jolokia_amq.conf"
+  - src: "jolokia/userparameter_jolokia_java.conf.j2"
+    dest: "{{ zabbix_user_param_dir }}/userparameter_jolokia_java.conf"
+
+- name: Copy config and script files
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "{{ item.mode }}"
+  with_items:
+  - src: "files/amq/queue_discovery.py"
+    dest: "{{ zabbix_scripts_dir }}/"
+    mode: 755

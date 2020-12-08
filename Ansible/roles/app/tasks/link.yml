@@ -1,0 +1,36 @@
+- name: Create folder
+  file:
+    path: "{{ app_yii2_files }}/image"
+    state: directory
+    recurse: yes
+
+- name: Create link
+  file:
+    src: "{{ app_yii2_files }}/image"
+    dest: "{{ app_yii2_www }}/{{ nginx_yii2_frontend_root }}/image"
+    state: link
+    force: yes
+  tags: app-commit
+
+- name: chown -R bitrix:bitrix "{{ app_yii2_files }}"
+  file:
+    path: "{{ app_yii2_files }}"
+    owner: bitrix
+    group: bitrix
+    recurse: yes
+  tags: app-commit
+
+- name: Selinux rdit
+  command: semanage fcontext -a -t httpd_sys_rw_content_t "{{ app_yii2_files }}"
+  ignore_errors: yes
+  tags: app-commit
+
+- name: Selinux rdit
+  command: semanage fcontext -a -t httpd_sys_rw_content_t "{{ app_yii2_files }}(/.*)?"
+  ignore_errors: yes
+  tags: app-commit
+
+- name: Restore SELinux labels on filesystem tree
+  command: /sbin/restorecon -R "{{ app_yii2_files }}"
+  ignore_errors: yes
+  tags: app-commit

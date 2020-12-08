@@ -1,0 +1,3 @@
+firewalld_add:
+  - { zone: "public", port: "80", type: "/tcp" }
+  - { zone: "public", port: "443", type: "/tcp" }

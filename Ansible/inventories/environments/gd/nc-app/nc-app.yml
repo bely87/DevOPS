@@ -1,0 +1,24 @@
+app_yii_mysql_host: 10.205.64.35
+app_yii_mysql_dbname: nextcar_yii2
+app_yii_mysql_username: nextcar_yii2
+app_yii_mysql_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          33376365653532333566313563613666383932303435666132316633323436646364303963386361
+          6364666638316332663635306632363935613530373065370a656234643161623366333733373133
+          33393634616162633136303131376239393430643937353935663339376335356232643735663865
+          6263353266373832310a396561336563623135303061346437653634346365353134353332303039
+          3639
+app_yii_git_clone: /var/lib/jenkins/workspace/gd-nextcar-app-git/
+php_edit_file:
+  - { file: "{{ php_file_root }}/php.ini", search: "display_errors", value: "display_errors = Off"}
+  - { file: "{{ php_file_root }}/php.ini", search: "expose_php", value: "expose_php = Off"}
+  - { file: "{{ php_file_root }}/php.ini", search: "allow_url_fopen", value: "allow_url_fopen = Off"}
+
+app_yii_cookieValidationKey:
+  - { name: "admin", key: "Y3yipjZawtivTrWpseKTucYHP3SGSsTI" }
+  - { name: "client", key: "K2vOe0Th80u0ePMFxFwTH0D5xVx3AMGy" }
+  - { name: "dealer", key: "gigX7QFCrDp95gcGzF5ofo5lx68Jb2YF" }
+  - { name: "frontend", key: "tGJa7nwd4BnakRP5zWZS0QBz9h5VSe0P" }
+
+php_yii_start: /opt/rh/rh-php71/root/usr/bin/php
+app_rpm_name: nextcar-dev.noarch.rpm

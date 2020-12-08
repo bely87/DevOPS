@@ -1,0 +1,168 @@
+---
+# - hosts: all
+#   tasks:
+  - name: Look for the "MySQLD" process
+    shell: ps -ef |  grep mysql | grep -v grep
+    register: process_list
+    changed_when: false
+    ignore_errors: yes
+  - debug: msg="{{ process_list.stdout_lines }}"
+  - pause:
+  - name: Start "Check Mysql version" if needed
+    shell: mysql --version
+#    when: "process_list.stdout.find('ps') == -1"
+#  - name: Start "Connect" if needed
+#    shell: mysql -uroot -plij mysql
+#    when: "process_list.stdout.find('ps') == -1"
+    register: out_ves
+    changed_when: false
+  - debug: msg="{{ out_ves.stdout_lines }}"
+  - pause:
+  - name: Start "IP" if needed
+    shell: ifconfig|grep inet
+    register: ip
+    changed_when: false
+  - debug: msg="{{ ip.stdout_lines }}"
+  - pause:
+#    when: "process_list.stdout.find('ps') == -1"
+  - name: Start "cat /etc/hosts" if needed
+    shell: cat /etc/hosts
+    register: hosts_list
+    changed_when: false
+  - debug: msg="{{ hosts_list.stdout_lines }}"
+  - pause:
+#    when: "process_list.stdout.find('ps') == -1"
+  - name: Start "cat /etc/resolv.conf" if needed
+    shell: cat /etc/resolv.conf
+    register: resolv
+    changed_when: false
+  - debug: msg="{{ resolv.stdout_lines }}"
+  - pause:
+#    when: "process_list.stdout.find('ps') == -1"
+  - name: Start "free" if needed
+    shell: free
+    register: mem
+    changed_when: false
+  - debug: msg="{{ mem.stdout_lines }}"
+  - pause:
+#  - command: yum list installed|grep maria
+#    args:
+#    warn: no
+  - name: Check "Install MariaDB" if needed
+    shell: yum list installed mariadb | grep mariadb | awk '{print $2}' | cut -d'-' -f1
+    warn: no
+    register: mari_list
+    changed_when: false
+  - debug: msg="{{ mari_list.stdout_lines }}"
+  - pause:
+  - name: Check "Install Galera" if needed
+    shell: yum list installed | grep galera | awk '{print $2}' | cut -d'-' -f1
+    register: gal_list
+    changed_when: false
+  - debug: msg="{{ gal_list.stdout_lines }}"
+  - pause:
+  - name: Check "CPU" if needed
+    shell: nproc
+    register: cpu_list
+    changed_when: false
+  - debug: msg="{{ cpu_list.stdout_lines }}"
+  - pause:
+  - name: Check "HDD" if needed
+    shell: df -h
+    register: hdd_list
+    changed_when: false
+  - debug: msg="{{ hdd_list.stdout_lines }}"
+  - pause:
+#  - name: Check "HDD" if needed
+#    shell: df -h
+#    changed_when: false
+  - name: Check "LOGrotate" if needed
+    shell: ls -l /etc/logrotate.d/*
+    register: lrt_list
+    changed_when: false
+  - debug: msg="{{ lrt_list.stdout_lines }}"
+  - pause:
+  - name: Check "Mysql conf" if needed
+    shell: ls -l /etc/my.cnf.d/*
+    register: my_list
+    changed_when: false
+  - debug: msg="{{ my_list.stdout_lines }}"
+  - pause:
+  - name: Check "ERROR MariaDB" if needed
+    shell: journalctl -xu mariadb
+    register: err_list
+    changed_when: false
+  - debug: msg="{{err_list.stdout_lines}}"
+    when: err_list.stderr_lines != ""
+  - pause:
+  - name: Check "SEstat" if needed
+    shell: /usr/sbin/sestatus
+    register: ses_list
+    changed_when: false
+  - debug: msg="{{ses_list.stdout_lines}}"
+    when: ses_list.stderr_lines != ""
+  - pause:
+  - name: Check "max_connections" if needed
+    shell: cat /etc/my.cnf.d/mariadb.cnf | grep max_connections
+    register: mc_list
+    changed_when: false
+  - debug: msg="{{mc_list.stdout_lines}}"
+    when: mc_list.stderr_lines != ""
+  - pause:
+  - name: Check "Buffer_pool_size" if needed
+    shell: cat /etc/my.cnf.d/mariadb.cnf | grep innodb_buffer_pool_size
+    register: bps_list
+    changed_when: false
+  - debug: msg="{{bps_list.stdout_lines}}"
+    when: bps_list.stderr_lines != ""
+  - pause:
+  - name: Check "DNS list u host" if needed
+    shell: nmcli dev show | grep DNS
+    register: dns_list
+    changed_when: false
+  - debug: msg="{{dns_list.stdout_lines}}"
+    when: dns_list.stderr_lines != ""
+  - pause:
+  - name: Check "Service & port list u host" if needed
+    shell: netstat -tulpan
+    register: ns_list
+    changed_when: false
+  - debug: msg="{{ns_list.stdout_lines}}"
+    when: ns_list.stderr_lines != ""
+  - pause:
+  - name: Check "Check System Limit f mariadb" if needed
+    shell: cat /etc/systemd/system/mariadb.service.d/limits.conf | grep Limit
+    register: cl_list
+    changed_when: false
+  - debug: msg="{{cl_list.stdout_lines}}"
+    when: cl_list.stderr_lines != ""
+  - pause:
+  - name: Check "Check swappiness" if needed
+    shell: cat /etc/sysctl.d/swappiness.conf | grep vm.swappiness
+    register: sl_list
+    changed_when: false
+  - debug: msg="{{sl_list.stdout_lines}}"
+    when: sl_list.stderr_lines != ""
+  - pause:
+  - name: Check "Check firrewalld all" if needed
+    shell: firewall-cmd --list-all
+    register: fwa_list
+    changed_when: false
+  - debug: msg="{{fwa_list.stdout_lines}}"
+    when: fwa_list.stderr_lines != ""
+  - pause:
+  - name: Check "Check firewalld all zones" if needed
+    shell: firewall-cmd --list-all-zones
+    register: fwz_list
+    changed_when: false
+  - debug: msg="{{fwz_list.stdout_lines}}"
+    when: fwz_list.stderr_lines != ""
+  - pause:
+  - name: Check "Galera Configs" if needed
+    shell: cat /etc/my.cnf.d/galera.cnf
+    register: gc_list
+    changed_when: false
+    ignore_errors: yes
+  - debug: msg="{{gc_list.stdout_lines}}"
+    when: gc_list.stderr_lines != ""
+  - pause:

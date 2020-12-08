@@ -1,0 +1,9 @@
+- name: Create user
+  user:
+    name: nginx
+    state: present
+    uid: "{{ nginx_uid }}"
+    # comment: 'Jetty Web Server'
+    # createhome: no
+    home: "{{ nginx_home }}"
+    system: yes

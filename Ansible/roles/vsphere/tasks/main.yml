@@ -1,0 +1,9 @@
+---
+# tasks file for vsphere
+- name: Include vars for vsphere.
+  include_vars:
+    file: ~/.vsphere.yml
+    name: vsphere_credential
+
+- include_tasks: create.yml
+  tags: create

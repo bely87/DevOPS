@@ -1,0 +1,71 @@
+---
+- name: 1011 register logrotate_slow_query_log_file regex
+  shell: "mysql -e 'select @@slow_query_log_file' | grep -v slow_query_log_file"
+  register: logrotate_slow_query_log_file
+  ignore_errors: yes
+
+- set_fact:
+    logrotate_mysql_slow_log_file: "{{ logrotate_slow_query_log_file.stdout }}"
+
+- name: 1011 add logrotate mysql config
+  template:
+    src: logrotate/mysql-server.j2
+    dest: "{{ logrotate_file }}"
+    owner: root
+    group: root
+    mode: "u=rw,g=r,o=r"
+
+- name: 1011 register logrotate_matched regex
+  shell: "grep -o -P --exclude={mysql-server,mysqlog} '/var/log/mysql/' /etc/logrotate.d/* | wc -l"
+  register: logrotate_matched
+
+- name: 1011 check if mysql logrotate jobs exist on a server
+  fail: msg="mysql slow log logrotate jobs already exist at /etc/logrotate.d/ please remove files containig them"
+  when: logrotate_matched.stdout != "0"
+
+- name: 1011 remove old OIR rule /etc/logrotate.d/mysqlog
+  file:
+    dest: /etc/logrotate.d/mysqlog
+    state: absent
+
+- block:
+  - name: 1011 create ssh dir
+    file:
+      dest: "{{ logrotate_ssh_path }}"
+      state: directory
+
+  - name: 1011 add key
+    copy:
+      src: files/loguser_id_rsa
+      dest: "{{ logrotate_ssh_key_path }}"
+      mode: 0600
+
+  when: logrotate_send_to_bkp == '1'
+
+- name: 1011 ensure mycnf dir exists
+  file:
+    dest: "{{ logrotate_mycnf_dir }}"
+    state: directory
+
+- name: 1011 add logrotate mysql my.cnf
+  template:
+    src: logrotate/logrotate_mycnf.j2
+    dest: "{{ logrotate_mycnf }}"
+    owner: root
+    group: root
+    mode: 0600
+
+
+- block:
+    - name: 1011 restorecon logrotate dirs
+      shell: restorecon -Rv "{{ item }}"
+      with_items:
+        - /etc/cron.daily/
+        - /usr/sbin/logrotate
+        - /var/lib/logrotate/
+
+    - name: 1011 add logrotate to permissive mode
+      selinux_permissive:
+        domain: logrotate_t
+        permissive: True
+  when: ansible_selinux is defined and ansible_selinux != False and ansible_selinux.status == 'enabled'

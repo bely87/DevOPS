@@ -1,0 +1,24 @@
+- name: Add Group
+  group:
+    name: '{{ item.name }}'
+    gid: '{{ item.uid }}'
+    state: present
+  with_items: "{{ user_create }}"
+  tags: create
+  
+- name: Add user
+  user:
+    name: '{{ item.name }}'
+    uid: '{{ item.uid }}'
+    group: '{{ item.group }}'
+  with_items: "{{ user_create }}"
+  tags: create
+
+- name: Edit files /etc/security/limits.conf
+  pam_limits:
+    domain: '{{ item.domain }}'
+    limit_type: '{{ item.limit_type }}'
+    limit_item: '{{ item.limit_item }}'
+    value: '{{ item.value }}'
+  with_items: "{{ limits_add }}"
+  tags: create

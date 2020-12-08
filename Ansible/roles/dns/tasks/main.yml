@@ -1,0 +1,62 @@
+---
+# tasks file for dns
+- set_fact:
+    zone_name_idx: "{{ inventory_hostname.index('.') }}"
+    zone_ip_o4: "{{ ansible_host.split('.')[-1] }}"
+    zone_ip_o3: "{{ ansible_host.split('.')[-2] }}"
+    zone_ip_o2: "{{ ansible_host.split('.')[-3] }}"
+    zone_ip_o1: "{{ ansible_host.split('.')[-4] }}"
+- set_fact:
+    zone_name: "{{ inventory_hostname[ zone_name_idx|int + 1: ] }}"
+    record_name: "{{ inventory_hostname.split('.').0  }}"
+    reverse_zone: "{{ zone_ip_o3 }}.{{ zone_ip_o2 }}.{{ zone_ip_o1 }}.in-addr.arpa"
+
+- block:
+  - name: include logopass from ~/.idm.yml
+    include_vars: ~/.idm.yml
+
+  - set_fact:
+      ipa_user: "{{ idm_username }}"
+      ipa_pass: "{{ idm_password }}"
+  when: ipa_user == '' or ipa_pass == ''
+
+
+- block:
+  - name: Creating A-record
+    ipa_dnsrecord:
+      ipa_host: "{{ ipa_host }}"
+      ipa_user: "{{ ipa_user }}"
+      ipa_pass: "{{ ipa_pass }}"
+      state: present
+      zone_name: "{{ zone_name }}"
+      record_name: "{{ record_name }}"
+      record_type: 'A'
+      record_value: "{{ ansible_host }}"
+      validate_certs: False
+    tags: dns-arecord
+    register: create_a_record
+    delegate_to: localhost
+    ignore_errors: yes
+
+  # - debug: msg="{{ reverse_zone }}"
+  # - pause: prompt="--------------"
+
+  - name: Creating PTR-record
+    ipa_dnsrecord:
+      ipa_host: "{{ ipa_host }}"
+      ipa_user: "{{ ipa_user }}"
+      ipa_pass: "{{ ipa_pass }}"
+
+      state: present
+
+      zone_name: "{{ reverse_zone }}"
+      record_name: "{{ zone_ip_o4 }}"
+      record_type: 'PTR'
+      record_value: "{{ inventory_hostname }}."
+      validate_certs: False
+    tags: dns-ptrrecord
+    register: create_ptr_record
+    delegate_to: localhost
+    ignore_errors: yes
+
+  # when: idm_username is defined and idm_password is defined and idm_username|length > 0 and idm_password|length > 0

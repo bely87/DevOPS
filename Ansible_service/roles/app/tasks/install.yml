@@ -1,0 +1,74 @@
+- name: Search 1c setup
+  win_shell: 'Get-Childitem -Path {{ app_folder_install }} -Filter 8.3* | sort Name | select Name -last 1 -ExpandProperty Name'
+  register: sql_setup
+  become: yes
+  vars:  # not you can also just set these as host vars instead
+    ansible_become_method: runas
+    ansible_become_user: '{{ domain_user }}'
+    ansible_become_pass: '{{domain_password}}'
+
+- name: install 1c server
+  win_command: '{{ app_folder_install }}{{ item }}\Setup.exe /S /l:RU DESIGNERALLCLIENTS={{ app_designerallclients }} THICKCLIENT={{ app_thickclient }} THINCLIENTFILE={{ app_thinclientfile }} THINCLIENT={{ app_thinclient }} WEBSERVEREXT={{ app_webserverext }} SERVER={{ app_server }} CONFREPOSSERVER={{ app_confreposserver }} CONVERTER77=0 SERVERCLIENT={{ app_serverclient }} LANGUAGES=RU'
+  become: yes
+  vars:  # not you can also just set these as host vars instead
+    ansible_become_method: runas
+    ansible_become_user: '{{ domain_user }}'
+    ansible_become_pass: '{{domain_password}}'
+  with_items: "{{ sql_setup.stdout_lines }}"
+
+- name: install Native Client
+  win_command: 'msiexec.exe /qn /i \\{{ folder_install }}\c$\Start\Native_Client\sqlncli.msi IACCEPTSQLNCLILICENSETERMS=YES'
+  become: yes
+  vars:  # not you can also just set these as host vars instead
+    ansible_become_method: runas
+    ansible_become_user: '{{ domain_user }}'
+    ansible_become_pass: '{{domain_password}}'
+
+- name: Create directory structure
+  win_file:
+    path: "{{ app_folder }}/srvinfo"
+    state: directory
+
+- name: Add access Folder
+  win_acl:
+    path: "{{ app_folder }}"
+    user: "{{ app_service_user }}"
+    rights: FullControl
+    type: allow
+    state: present
+    description: Auriga
+    inherit: ContainerInherit, ObjectInherit
+    propagation: 'None'
+
+- name: Search 1c install
+  win_shell: 'Get-Childitem -Path "{{ app_folder }}" -Filter 8.3* | sort Name | select Name -last 1 -ExpandProperty Name'
+  register: sql_install
+
+- name: Remove a service
+  win_service:
+    name: 1C:Enterprise 8.3 Server Agent (x86-64)
+    state: absent
+  ignore_errors: yes
+
+- name: Copy appls config
+  win_copy:
+    src: "{{ lookup('env','PWD') }}/templates/1cv8wsrv.lst.j2"
+    dest: '{{ app_folder }}\srvinfo\1cv8wsrv.lst'
+  when: "'win-appls' in group_names"
+
+- name: RegMSC
+  win_shell: '"{{ app_folder }}{{ item }}\bin\RegMSC.cmd"'
+  with_items: "{{ sql_install.stdout_lines }}"
+
+- pause:
+    seconds: 10
+
+- name: Set the log on user to a domain account
+  win_service:
+    name: 1C:Enterprise 8.3 Server Agent (x86-64)
+    path: '"{{ app_folder }}{{ item }}\bin\ragent.exe" -srvc -agent -regport 1541 -port 1540 -range 1560:1591 -d "{{ app_folder }}srvinfo"'
+    state: restarted
+    start_mode: auto
+    username: "{{ app_service_user }}"
+    password: "{{ app_service_password }}"
+  with_items: "{{ sql_install.stdout_lines }}"

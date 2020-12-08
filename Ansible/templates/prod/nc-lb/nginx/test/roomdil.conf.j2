@@ -1,0 +1,41 @@
+upstream myroomdil {
+      server 10.205.45.34:80 max_fails=1 fail_timeout=10s weight=5;
+  }
+
+server {
+    listen 11080;
+    server_name 62.76.157.140;
+
+    log_subrequest on;
+
+    keepalive_timeout   60;
+#    add_header Strict-Transport-Security 'max-age=604800' always;
+
+    location / {
+
+        if ($msec ~ "(.*)\.(.*)") {
+            set $epoch_millis "$1$2";
+        }
+
+        access_log /var/log/nginx/roomdil.access.log ncar;
+        error_log /var/log/nginx/roomdil.error.log warn;
+
+        #auth_basic "Restricted Content";
+        #auth_basic_user_file /etc/nginx/conf.d/.htpasswd;
+
+        proxy_pass http://myroomdil;
+        proxy_pass_header Set-Cookie;
+        proxy_next_upstream error timeout;
+        proxy_set_header Host      $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        add_header X-Proxy-Cache $upstream_cache_status;
+    }
+
+    location /nginx_status {
+        stub_status on;
+        access_log off;
+        allow 127.0.0.1; #Указываем IP адрес, с которого будем опрашивать Nginx с помощью CollectD.
+        deny all;
+    }
+}

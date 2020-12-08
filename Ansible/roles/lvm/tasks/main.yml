@@ -1,0 +1,31 @@
+---
+- name: list vg
+  shell: vgs | sed '1d'| awk '{print $1}'
+  register: vg_list
+
+- name: create vgs list
+  set_fact:
+    vgs_list: "{{ vm_config.vgs | map(attribute='name') | list }}"
+    lvm_list: "{{ vm_config.vgs | map(attribute='lvs') | list }}"
+
+- block:
+
+  - name: set bundle and use lvg
+    include: vg_create.yml vg_name={{vgn}}
+    with_items:
+      - "{{vgs_list}}"
+    loop_control:
+      loop_var: vgn
+
+  - name: pvresize existing volumes
+    shell: pvresize /dev/{{item.1.name}}
+    with_subelements:
+      - "{{ vm_config.vgs }}"
+      - "disks"
+    when: item.0.name in vg_list.stdout_lines
+
+  - include_tasks: lv_create.yml
+    when: "'Undefined' not in lvm_list"
+    # when: ansible_os_family == "RedHat"
+
+  when: vgs_list is defined and vgs_list.0|length > 0

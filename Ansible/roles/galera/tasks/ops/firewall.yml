@@ -1,0 +1,21 @@
+---
+- hosts: restore
+  become: yes
+  tasks:
+
+  - name: create firewall rules
+    shell: "{{ item }}"
+    with_items:
+      - "firewall-cmd --new-service=mysql --permanent"
+      - "firewall-cmd --new-service=zabbix-agent --permanent"
+      - "firewall-cmd --service=mysql --add-port=3306/tcp --permanent"
+      - "firewall-cmd --zone=public --add-service=mysql --add-service=zabbix-agent --permanent"
+      - "firewall-cmd --service=zabbix-agent --add-port=10050/tcp --permanent"
+      - "firewall-cmd --service=zabbix-agent --add-port=10050/udp --permanent"
+      - "firewall-cmd --zone=public --add-service=mysql --permanent"
+      - "firewall-cmd --reload"
+      - "firewall-cmd --new-service=galera --permanent"
+      - "firewall-cmd --service=galera --add-port=3306/tcp --add-port=4567/tcp --add-port=4567/udp --add-port=4568/tcp --add-port=4444/tcp --permanent"
+      - "firewall-cmd --new-zone=galeranet --permanent"
+      - "firewall-cmd --zone=galeranet --add-source=10.206.0.0/24 --permanent"
+      - "firewall-cmd --zone=galeranet --add-service=mysql --add-service=galera --permanent"

@@ -1,0 +1,5 @@
+- name: Create directory structure
+  win_file:
+    path: '{{ item.name}}'
+    state: '{{ item.state}}'
+  with_items: "{{ fs_folder_create }}"

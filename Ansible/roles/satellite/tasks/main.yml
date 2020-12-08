@@ -1,0 +1,54 @@
+---
+- name: check registration on sattelite
+  shell: 'subscription-manager identity| grep "ID: ORGLOT_OFFICE"'
+  register: sreg
+  failed_when: sreg.rc==10
+
+- name: register on idm
+  when: sreg.rc!=0 or sattelite_reg_force=="yes"
+  block:
+  - name: Ensure hostname set
+    hostname: name={{ inventory_hostname }}
+    
+  - name: ssl dir is exist
+    stat:
+      path: /var/lib/puppet/ssl
+    register: ssl_path
+
+  - name: Unregister a host
+    shell: >
+      {{ item }}
+    with_items:
+    - "subscription-manager unsubscribe --all"
+    - "subscription-manager clean"
+
+  - name: Clean old certs
+    shell: >
+      {{ item }}
+    with_items:
+    - "find /var/lib/puppet/ssl -name '*.pem' -delete"
+    when: ssl_path.stat.exists 
+
+  - name: clean puppet master certs
+    shell: "sudo /usr/bin/puppet cert clean {{ inventory_hostname }}"
+    become: no
+    delegate_to: "{{ satellite_host }}"
+    ignore_errors: yes
+
+  - name: Remove puppet certs
+    shell: >
+      find  /var/lib/puppet/ssl -type f -delete
+    register: del_res
+    failed_when: del_res.rc == 2
+
+  - name: Downloading script for registration
+    get_url:
+      url: "{{ satellite_url }}"
+      dest: /tmp/reg_sat.sh
+      force: yes
+
+  - name: Executing script
+    shell: >
+      sh /tmp/reg_sat.sh
+    async: 300
+    poll: 10

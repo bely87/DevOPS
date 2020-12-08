@@ -1,0 +1,418 @@
+---
+
+- name: include logopass from ~/.idm.yml
+  include_vars: ~/.idm.yml
+
+- name: configure nscd service (disable cashing)
+  block:
+    - name: disable cash passwd
+      replace:
+        path: /etc/nscd.conf
+        regexp: '(enable-cache\s*passwd\s*)yes'
+        replace: '\1no'
+        backup: yes
+
+    - name: disable cash group
+      replace:
+        path: /etc/nscd.conf
+        regexp: '(enable-cache\s*group\s*)yes'
+        replace: '\1no'
+
+    - name: disable cash services
+      replace:
+        path: /etc/nscd.conf
+        regexp: '(enable-cache\s*services\s*)yes'
+        replace: '\1no'
+
+    - name: disable cash netgroup
+      replace:
+        path: /etc/nscd.conf
+        regexp: '(enable-cache\s*netgroup\s*)yes'
+        replace: '\1no'
+
+    - name: restart nscd service
+      systemd:
+        name: nscd
+        state: restarted
+  when: ansible_distribution=="RedHat"
+
+- name: check_install ipa-client
+  yum:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - ipa-client
+  when: ansible_distribution=="RedHat"
+
+- name: adding repo and check_install freeipa-client
+  block:
+    - apt_repository:
+        repo: deb http://apt.numeezy.fr jessie main
+        state: present
+
+    - name: Add an Apt key
+      apt_key:
+        url: http://apt.numeezy.fr/numeezy.asc
+        state: present
+
+    - name: check_install freeipa-client and nscd
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop:
+        - freeipa-client
+  when: ansible_distribution=="Debian"
+
+- name: remove configuration in Debian
+  block:
+    - name: remove session required pam_mkomedir
+      lineinfile:
+        dest: /etc/pam.d/common-session
+        state: absent
+        regexp: '^session\s*required\s*pam_mkhomedir.*$'
+
+    - name: remove passwd group shadow sudeors from nsswitch.conf
+      lineinfile:
+        dest: /etc/nsswitch.conf
+        state: absent
+        regexp: '^passwd:\s\+.*$\|^group:\s\+.*$\|^shadow:\s\+.*$\|^sudoers:\s\+.*$'
+
+    - name: insert strings to nsswitch
+      lineinfile:
+        dest: /etc/nsswitch.conf
+        insertafter: 'EOF'
+        line: "{{ item }}"
+      loop:
+        - 'sudoers: files'
+        - 'passwd:  compat'
+        - 'group:   compat'
+        - 'shadow:  compat'
+  when: ansible_distribution=="Debian"
+
+- name: configure certs on Debian hosts
+  block:
+    - name: Creates directory for certs
+      file: path=/usr/share/ca-certificates/gosloto state=directory
+
+    - name: Copy Gosloto_PICA1.crt
+      copy:
+        src: Gosloto_PICA1.crt
+        dest: /usr/share/ca-certificates/gosloto/
+
+    - name: Copy Gosloto_PICA2.crt
+      copy:
+        src: Gosloto_PICA2.crt
+        dest: /usr/share/ca-certificates/gosloto/
+
+    - name: Copy Gosloto_PICA.crt
+      copy:
+        src: Gosloto_PICA.crt
+        dest: /usr/share/ca-certificates/gosloto/
+
+    - name: Copy Gosloto_RCA1.crt
+      copy:
+        src: Gosloto_RCA1.crt
+        dest: /usr/share/ca-certificates/gosloto/
+
+    - name: Copy Gosloto_RCA.crt
+      copy:
+        src: Gosloto_RCA.crt
+        dest: /usr/share/ca-certificates/gosloto/
+
+    - name: Copy GoslotoRootCAInternal.crt
+      copy:
+        src: GoslotoRootCAInternal.crt
+        dest: /usr/share/ca-certificates/gosloto/
+
+    - name: delete gosloto from /etc/ca-certificates.conf
+      lineinfile:
+        dest: /etc/ca-certificates.conf
+        state: absent
+        regexp: 'gosloto'
+
+    - name: insert certs pathes to /etc/ca-certificates.conf
+      lineinfile:
+        dest: /etc/ca-certificates.conf
+        insertafter: 'EOF'
+        line: "{{ item }}"
+      loop:
+        - "gosloto/Gosloto_RCA.crt"
+        - "gosloto/Gosloto_PICA1.crt"
+        - "gosloto/Gosloto_PICA2.crt"
+        - "gosloto/Gosloto_PICA.crt"
+        - "gosloto/Gosloto_RCA1.crt"
+        - "gosloto/GoslotoRootCAInternal.crt"
+
+    - name: update-ca-certificates
+      command: update-ca-certificates --verbose
+  when: ansible_distribution=="Debian"
+
+- name: Run the IPA Client uninstaller
+  shell: "/usr/sbin/ipa-client-install --uninstall --unattended"
+  when: ansible_distribution=="RedHat"
+  register: uninstaller
+  failed_when: uninstaller.rc==10
+
+- name: ipa join
+  shell: yes | ipa-client-install --mkhomedir --force-join --hostname={{ inventory_hostname }} --no-ntp --domain="{{ join_ipa_domain }}" --realm={{ join_ipa_realm }} --principal "{{ join_ipa_user }}@{{join_ipa_realm}}" --password "{{ join_ipa_pass }}"
+  when: ansible_distribution=="RedHat"
+
+- name: ipa join
+  shell: yes | ipa-client-install --mkhomedir --force-join --hostname={{ inventory_hostname }} --no-ntp --domain="{{ join_ipa_domain }}" --realm={{ join_ipa_realm }} --principal "{{ join_ipa_user }}@{{join_ipa_realm}}" --password "{{ join_ipa_pass }}"
+  when: ansible_distribution=="Debian"
+
+- name: make sure that sshd restarted
+  systemd:
+    name: sshd
+    state: restarted
+  when: ansible_distribution=="RedHat"
+
+- name: make sure that sshd restarted
+  service:
+    name: ssh
+    state: restarted
+  when: ansible_distribution=="Debian"
+
+- name: configure nsswitch in Debian
+  block:
+    - name: delete session required pam_mkhomedir from /etc/pam.d/common-session
+      lineinfile:
+        dest: /etc/pam.d/common-session
+        state: absent
+        regexp: '^session\s\+required\s\+pam_mkhomedir.*$'
+
+    - name: add session required pam_mkhomedir.so to /etc/pam.d/common-session
+      lineinfile:
+        dest: /etc/pam.d/common-session
+        insertafter: 'EOF'
+        line: "{{ item }}"
+      loop:
+        - 'session required pam_mkhomedir.so'
+
+    - name: remove passwd group shadow sudeors from nsswitch.conf
+      lineinfile:
+        dest: /etc/nsswitch.conf
+        state: absent
+        regexp: '^passwd:\s\+.*$\|^group:\s\+.*$\|^shadow:\s\+.*$\|^sudoers:\s\+.*$'
+
+    - name: insert strings to nsswitch
+      lineinfile:
+        dest: /etc/nsswitch.conf
+        insertafter: 'EOF'
+        line: "{{ item }}"
+      loop:
+        - 'sudoers: files sss'
+        - 'passwd:  files sss'
+        - 'group:   files sss'
+        - 'shadow:  files sss'
+  when: ansible_distribution=="Debian"
+
+- name: remove passwd from nsswitch.conf
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    state: absent
+    regexp: '^\s*passwd:\s\+.*$'
+
+- name: insert passwd string to nsswitch
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    insertafter: 'EOF'
+    line: 'passwd:  files'
+
+- name: remove group from nsswitch.conf
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    state: absent
+    regexp: '^\s*group:\s\+.*$'
+
+- name: insert group string to nsswitch
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    insertafter: 'EOF'
+    line: 'group:  files'
+
+- name: Ensure group {{ ORGLOT_USER }} exists
+  group:
+    gid: "{{ ORGLOT_USER_ID }}"
+    name: "{{ ORGLOT_USER }}"
+    state: present
+
+- name: Add the user {{ ORGLOT_USER }} with a specific uid and a primary group of {{ ORGLOT_USER }}
+  user:
+    name: "{{ ORGLOT_USER }}"
+    comment: "User for orglot software"
+    uid: "{{ORGLOT_USER_ID}}"
+    group: "{{ ORGLOT_USER }}"
+    shell: /bin/false
+
+- name: remove passwd from nsswitch.conf
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    state: absent
+    regexp: '^\s*passwd:\s\+.*$'
+
+- name: insert passwd string to nsswitch
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    insertafter: 'EOF'
+    line: 'passwd:  sss files'
+
+- name: remove group from nsswitch.conf
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    state: absent
+    regexp: '^\s*group:\s\+.*$'
+
+- name: insert group string to nsswitch
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    insertafter: 'EOF'
+    line: 'group:  sss files'
+
+- name: manually correcting for ugly-entered users
+  block:
+    - name: check existance for a.zelenskaya
+      stat:
+        path: /home/a.zelenskaya
+      register: azel_ex
+
+    - name: correcr azelenskaya
+      block:
+        - name: correct username
+          lineinfile:
+            regex: 'a\.zelenskaya'
+            line: 'azelenskaya'
+            dest: /etc/passwd
+
+        - name: correct username
+          lineinfile:
+            regex: 'a\.zelenskaya'
+            line: 'azelenskaya'
+            dest: /etc/group
+
+        - name: rename directory for azelenskaya
+          shell: mv -f /home/a.zelenskaya /home/azelenskaya
+      when: azel_ex.stat.exists == True
+
+- name: update passwd files
+  block:
+    - name: get all users with dirs
+      shell: ls -1 /home/ | grep -v "lost+found"
+      register: all_us_names
+
+    - name: get new_uids
+      shell: "getent passwd {{ item }}"
+      loop: "{{ all_us_names.stdout_lines }}"
+      register: new_uids
+
+    - name: get new_gids
+      shell: "getent group {{ item }}"
+      loop: "{{ all_us_names.stdout_lines }}"
+      register: new_gids
+
+    - name: get old_uids for all
+      shell: "grep {{ item }} /etc/passwd"
+      loop: "{{ all_us_names.stdout_lines }}"
+      ignore_errors: yes
+      register: old_uids
+
+    - debug:
+        msg: "user {{item.0.item}} old uid:{{ item.0.stdout.split(':').2 }} new uid:{{ item.1.stdout.split(':').2 }} new gid:{{item.2.stdout.split(':').2}}"
+      when: item.0.rc==0 and item.1.rc==0 and item.2.rc==0 and item.0.item == item.1.item == item.2.item
+      loop: "{{ query('nested', old_uids.results, new_uids.results, new_gids.results ) }}"
+
+    - name: find old session
+      shell: "loginctl | grep {{item.item}}| grep {{item.stdout.split(':').2}}| awk '{print $1}'"
+      register: old_session
+      when: item.rc==0
+      loop: "{{old_uids.results}}"
+
+    - name: kill old session
+      shell: loginctl kill-session {{item.item.stdout}}
+      loop: "{{old_session.results}}"
+      when: item.item.stdoud is defined
+
+    - name: chown user folders and delete user from passwd
+      block:
+        - name: delete user from passwd
+          lineinfile:
+            dest: /etc/passwd
+            state: absent
+            regexp: '^${{item.0.item}}:.*$'
+          when: item.0.rc==0
+          loop: "{{ query('nested', old_uids.results, new_uids.results, new_gids.results ) }}"
+
+        - name: chown user folders
+          shell: find / -path '/mnt/*' -prune -uid {{item.0.stdout.split(':').2}} ! -wholename / -type d -exec chown {{item.1.stdout.split(':').2}} {} -R\;
+          when: item.0.rc==0 and item.1.rc==0 and item.2.rc==0 and item.0.item == item.1.item == item.2.item
+          loop: "{{ query('nested', old_uids.results, new_uids.results, new_gids.results ) }}"
+
+        - name: chgroup home user
+          file:
+            path: /home/{{item.0.item}}
+            recurse: yes
+            group: "{{item.2.stdout.split(':').2}}"
+          when: item.0.rc==0 and item.1.rc==0 and item.2.rc==0 and item.0.item == item.1.item == item.2.item
+          loop: "{{ query('nested', old_uids.results, new_uids.results, new_gids.results ) }}"
+
+      when: item.0.item!="" and (item.1.stdout.split(':').2!=item.2.stdout.split(':').2)
+
+- name: remove passwd group shadow sudeors from nsswitch.conf
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    state: absent
+    regexp: '^\s*passwd:\s\+.*$\|^\s*group:\s\+.*$'
+
+- name: insert strings to nsswitch
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    insertafter: 'EOF'
+    line: "{{ item }}"
+  loop:
+    - 'passwd:  files sss'
+    - 'group:  files sss'
+
+- name: crutch, should work reliably
+  file:
+    path: /
+    recurse: no
+    owner: root
+
+- name: Restart sshd
+  service:
+    name: 'sshd'
+    state: 'restarted'
+  when: ansible_distribution=="RedHat"
+
+- name: Restart ssh
+  service:
+    name: 'ssh'
+    state: 'restarted'
+  when: ansible_distribution=="Debian"
+
+- block:
+  - name: Replace systemd with sysvinit
+    apt: name={{ item }} state=present
+    register: state_packages
+    with_items:
+      - sysvinit-core
+      - sysvinit-utils
+
+  - name: restart serverk
+    shell: sleep 2 && shutdown -r now
+    async: 1
+    poll: 0
+    ignore_errors: true
+
+  - name: Wait 300 seconds for port 22 to become open and contain "OpenSSH"
+    local_action:
+      module: wait_for
+      host: "{{ ansible_host }}"
+      port: 22
+      search_regex: OpenSSH
+      delay: 5
+    become: no
+
+  when: ansible_os_family == 'Debian'

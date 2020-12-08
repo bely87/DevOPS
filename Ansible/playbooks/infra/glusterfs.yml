@@ -1,0 +1,12 @@
+- hosts: glusterfs
+  gather_facts: yes
+  become: yes
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/gluster.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/lvm.yml"
+
+  roles:
+    - { role: lvm, tags: create }
+    - { role: keepalived, tags: prod_create }
+    - { role: firewalld, tags: config}
+    - { role: gluster, tags: create }

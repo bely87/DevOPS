@@ -1,0 +1,12 @@
+---
+- name: MAIN - Creating VMs
+  import_playbook: playbooks/infra/all.yml
+
+- name: Setting VMs nc-lb
+  import_playbook: playbooks/infra/nc-lb.yml
+
+- name: Setting VMs nc-app
+  import_playbook: playbooks/infra/nc-app.yml
+
+- name: Setting VMs galera-db
+  import_playbook: playbooks/infra/galera-db.yml

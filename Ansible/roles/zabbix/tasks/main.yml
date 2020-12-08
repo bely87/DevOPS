@@ -1,0 +1,252 @@
+---
+
+- name: Get stats
+  local_action:
+    module: stat
+    path: "{{ zabbix_global_path }}"
+  become: no
+  register: global_path
+
+- name: Include global vars
+  include_vars:
+    dir: "{{ zabbix_global_path }}"
+    extensions:
+    - yml
+  when: global_path.stat.isdir is defined and global_path.stat.isdir
+
+- tags: always
+  block:
+    - set_fact:
+        zabbix_host_dc: "1|0"
+      when: inventory_hostname in (groups[ group_names[0] ][::2])
+
+
+    - set_fact:
+        zabbix_host_dc: "2|0"
+      when: >
+        (inventory_hostname in (groups[ group_names[0] ][1::2])) or
+        (inventory_hostname | regex_search('g.-[^ ]*\.su'))
+
+    - set_fact:
+        zabbix_host_dc: "3|0"
+      when: >
+        (inventory_hostname | regex_search('.*garb.*office$')) or
+        (inventory_hostname | regex_search('gate1-.*office$')) or
+        (inventory_hostname | regex_search('.*lotod.*'))
+
+    - set_fact:
+        # Filtered list of proxies for specific DC
+        zabbix_proxy_internal_list: "{{ zabbix_proxy_list | selectattr('dc','search', zabbix_host_dc ) | map(attribute='name') | list | join(',') }}"
+
+    - set_fact:
+        zabbix_proxy: "{{ zabbix_proxy_internal_list.split(',').0 }}"
+
+#In the first block we will install zabbix agent due to OS family
+- name: 'check variables'
+  fail: msg="zabbix_group is not defined !!!"
+  when: zabbix_group is not defined
+
+- block:
+  - name: install zabbix-agent
+    yum:
+      name: zabbix-agent
+      state: present
+      enablerepo: "{{ zabbix_repo }}"
+      disablerepo: "*"
+    when: install_zabbix_agent
+
+  - name: install mysql-python
+    yum:
+      name: "{{ item }}"
+      state: present
+    with_items:
+      - MySQL-python
+    when: "'0rglot-linux-mysql' in zabbix_templates"
+  when: ansible_os_family == 'RedHat'
+
+- name: Install zabbix-agent on Debian
+  apt:
+    name: zabbix-agent
+    state: present
+    allow_unauthenticated: yes
+  when:  install_zabbix_agent  and ansible_os_family == 'Debian'
+
+- name: find all existing groups
+  shell: >
+    awk -F: '{print $1}' /etc/group
+  register: all_groups
+
+- name: add zabix user to additionl groups
+  user:
+    name: zabbix
+    groups: "{{ all_groups.stdout_lines | intersect(zabbix_user_groups) }}"
+
+- name: setup selinux permissions for zabbix
+  selinux_permissive:
+    name: zabbix_agent_t
+    permissive: true
+  when: ansible_os_family == 'RedHat' and ansible_selinux.status != 'disabled'
+
+- name: copy addition config files
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  with_items:
+    "{{ zabbix_conf_files }}"
+
+- name: copy template configs
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  with_items: "{{ zabbix_conf_templates }}"
+  tags: zabbix_conf_templates
+
+- name: move old GA configs
+  command: mv /etc/zabbix/zabbix_agentd.d/"{{ item }}" /home/zabbix/"{{ item }}".old
+  ignore_errors: yes
+  with_items:
+    - hostname.conf
+    - orglot-sa.conf
+    - gate2-proxy.conf
+    - rh-proxy.conf
+    - rh_proxy.conf
+
+- name: fix debian ga configs
+  lineinfile:
+    path: "/etc/zabbix/zabbix_agentd.conf"
+    regexp: 'orglot-sa.conf'
+    line: 'Include=/etc/zabbix/zabbix_agentd.d/proxy.conf'
+  when: ansible_os_family == 'Debian' and inventory_hostname | regex_search('^g[^ ]*\.su')
+
+- name: add zabbix-agent config not in GA
+  template:
+    src: proxy.conf.j2
+    dest: "{{ zabbix_user_param_dir}}/proxy.conf"
+  tags: proxy
+
+- name: DROP non-GA zabbix configuration
+  file:
+    name: "{{item}}"
+    state: absent
+  with_items:
+    - /var/lib/zabbix/.my.cnf
+    - /var/lib/zabbix/bin/my-sql
+    - /var/lib/zabbix/tmp/zabbix-my-sql
+    - /etc/zabbix/zabbix_agentd.d/mysql-up.conf
+    - /etc/zabbix/zabbix_agentd.d/proxy.conf
+    - /etc/zabbix/zabbix_agentd.d/userparameter_iostat.conf
+    - /etc/zabbix/zabbix_agentd.d/userparameter_mysql.conf
+  when: inventory_hostname | regex_search('^g[^ ]*\.su')
+
+- name: DROP non-GA zabbix directories
+  file:
+    name: "{{item}}"
+    state: absent
+  with_items:
+    - /var/lib/zabbix/tmp/
+    - /var/lib/zabbix/scripts/
+    - /var/lib/zabbix/bin/
+    - /var/lib/zabbix/
+  when: inventory_hostname | regex_search('^g[^ ]*\.su')
+
+- name: add zabbix-agent config in GA
+  template:
+    src: GA/orglot-sa.conf.j2
+    dest: /etc/zabbix/zabbix_agentd.d/proxy.conf
+  when: inventory_hostname | regex_search('^g[^ ]*\.su')
+
+- name: creating zabbix home and scripts directories
+  file:
+    path: "{{ item }}"
+    owner: zabbix
+    group: zabbix
+    recurse: yes
+  with_items:
+    - "{{ zabbix_scripts_dir }}"
+    - "{{ zabbix_tmp_dir }}"
+
+
+- include: iostat.yml
+  when: "'Template_Iostat-All-Disk-Utilization' in zabbix_templates"
+
+- include: jolokia.yml
+  when: "'Template Jolokia JVM' in zabbix_templates"
+
+- include: mysql.yml
+  when: "'0rglot-linux-mysql' in zabbix_templates"
+
+- name: restart and enable zabbix-agent service
+  service:
+    name: zabbix-agent
+    state: restarted
+    enabled: yes
+
+# - pause:
+#     prompt: "--- Please make sure that ansible user has permissions for {{ zabbix_group }} group. [ Administration -> User groups -> Users for management hosts -> Permissions ]"
+
+# Со слов Андрея Крючкова фаерволл для заббикс агента неразрывен с ролью, todo feature - xml для фаерволла.
+- name: add firewall rules
+  command: "{{ item }}"
+  with_items:
+    - "firewall-cmd --new-service=zabbix-agent --permanent"
+    - "firewall-cmd --zone=public --add-service=zabbix-agent --permanent"
+    - "firewall-cmd --service=zabbix-agent --add-port=10050/tcp --permanent"
+    - "firewall-cmd --reload"
+  ignore_errors: yes
+
+- name: add host group to zabbix server
+  local_action:
+    module: zabbix_group
+    server_url: "{{ zabbix_server_url }}"
+    login_user: "{{ zabbix_user.name }}"
+    login_password: "{{ zabbix_user.password_prod if env == 'prod' else  zabbix_user.password_test }}"
+    state: present
+    host_groups: "{{ item }}"
+  with_items:
+  - "{{ zabbix_group }}"
+  become: no
+  run_once: yes
+
+- name: Create a new host or update an existing host's info
+  local_action:
+    module: zabbix_host
+    server_url: "{{ zabbix_server_url }}"
+    login_user: "{{ zabbix_user.name }}"
+    login_password: "{{ zabbix_user.password_prod if env == 'prod' else  zabbix_user.password_test }}"
+    host_name: '{{ inventory_hostname }}'
+    visible_name: "{{ zabbix_hostname_short }}"
+    host_groups: "{{ zabbix_group }}"
+    link_templates: "{{ zabbix_templates }}"
+    status: enabled
+    state: present
+    inventory_mode: automatic
+    interfaces:
+      - type: 1
+        main: 1
+        useip: 1
+        ip: "{{ ansible_default_ipv4.address }}"
+        dns: "{{ inventory_hostname }}"
+        port: 10050
+    proxy: "{{ zabbix_proxy }}"
+  become: no
+
+- name: Create necessary host MACROS
+  local_action:
+    module: zabbix_hostmacro
+    server_url: "{{ zabbix_server_url }}"
+    login_user: "{{ zabbix_user.name }}"
+    login_password: "{{ zabbix_user.password_prod if env == 'prod' else  zabbix_user.password_test }}"
+    host_name: "{{ inventory_hostname }}"
+    macro_name: "{{ item.name }}"
+    macro_value: "{{ item.value }}"
+    state: present
+    timeout: 10
+  with_items: "{{ zabbix_macros }}"
+  become: no
+  when: zabbix_macros is defined and zabbix_macros|length != 0

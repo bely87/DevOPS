@@ -1,0 +1,8 @@
+- hosts: win-back
+  gather_facts: no
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/back.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/win-db/mssql.yml"
+
+  roles:
+    - role: back

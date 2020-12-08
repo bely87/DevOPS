@@ -1,0 +1,27 @@
+---
+# - block:
+#   - debug: msg="{{ env }}"
+#   - pause: prompt="------------------------------"
+#   tags: always
+
+# with_items: "{{ sites|list }}"
+
+# - debug: msg="{{ item }}"
+#   with_fileglob: "{{ nginx_include }}*.j2"
+#
+
+- include_tasks: users.yml
+  when:
+  - nginx_uid != ''
+  tags: users
+
+
+- include_tasks: install.yml
+  tags: install
+
+
+- include_tasks: remove-extras.yml
+  tags: config
+
+- include_tasks: configuration.yml
+  tags: config

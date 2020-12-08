@@ -1,0 +1,92 @@
+upstream backend {
+    server unix:/var/opt/rh/rh-php71/run/php-fpm/www.sock;
+    #server 127.0.0.1:9002;
+}
+
+server {
+    listen 80;
+    server_name nextcar;
+    server_name_in_redirect off;
+    access_log /var/log/nginx/next.car.access.log main;
+    error_log /var/log/nginx/next.car.error.log;
+    index index.php index.html;
+    client_max_body_size 1024M;
+    client_body_buffer_size 4M;
+    root /mnt/data/www;
+    #set_real_ip_from 213.59.226.180;
+    real_ip_header X-Real-IP;
+
+    location / {
+        try_files       $uri $uri/ @bitrix;
+    }
+
+    location /nginx_status {
+	stub_status on;
+	access_log off;
+	allow 127.0.0.1; #IP адрес, с которого будем опрашивать Nginx с помощью CollectD.
+	deny all;
+    }
+
+    location ~ \.php$ {
+        try_files       $uri @bitrix;
+        include conf.d/fpm_settings.sub;
+        fastcgi_pass    backend;
+        #fastcgi_pass    unix:/var/run/php-fpm/www.sock; #путь до сокета php-fpm
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location @bitrix {
+        fastcgi_pass_header "X-Accel-Expires";
+        fastcgi_pass backend;
+        include conf.d/fpm_settings.sub;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root/bitrix/urlrewrite.php;
+    }
+
+    location ^~ /bitrix/admin/ {
+       try_files       $uri @bitrixadm;
+       include conf.d/fpm_settings.sub;
+       fastcgi_pass backend;
+       #fastcgi_pass    unix:/var/run/php-fpm/www.sock; #путь до сокета php-fpm
+       fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+       include fastcgi_params;
+    }
+    location @bitrixadm{
+        include conf.d/fpm_settings.sub;
+        fastcgi_pass    backend;
+        #fastcgi_pass    unix:/var/run/php-fpm/www.sock; #путь до сокета php-fpm
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root/bitrix/admin/index.php;
+    }
+
+           location = /favicon.ico {
+                   log_not_found off;
+                   access_log off;
+           }
+
+           location = /robots.txt {
+                   allow 127.0.0.1;
+                   log_not_found off;
+                   access_log off;
+           }
+           location ~* ^.+\.(jpg|jpeg|gif|png|svg|js|css|mp3|ogg|mpe?g|avi|zip|gz|bz2?|rar|woff)$ {
+                   access_log off;
+                   expires max;
+                   add_header Cache-Control "public";
+                   error_page 404 = /404.html;#не забываем создать страницу
+           }
+
+           location ~ (/\.ht|/bitrix/modules|/upload/support/not_image|/bitrix/php_interface) {
+               deny all;
+           }
+
+           location ~ /.svn/ {
+              deny all;
+           }
+
+           location ~ /\.ht {
+               deny  all;
+           }
+
+}

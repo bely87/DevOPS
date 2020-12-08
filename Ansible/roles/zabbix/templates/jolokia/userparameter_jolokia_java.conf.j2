@@ -1,0 +1,1 @@
+UserParameter=jolokia-java[*],HOME=/var/lib/zabbix curl -s -u {{jolokia_admin.name }}:{{ jolokia_admin.password }} "http://localhost:8161/hawtio/jolokia/read/java.lang:type=$1"  | jq -r "$2"

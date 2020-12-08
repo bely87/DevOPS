@@ -1,0 +1,15 @@
+---
+- name: restart keepalived
+  service:
+    name: keepalived
+    state: restarted
+  when: debug == False
+
+- name: restart network
+  service:
+    name: network
+    state: restarted
+  when: debug == False
+
+- name: update sysctl
+  shell: sysctl --system

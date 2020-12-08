@@ -1,0 +1,16 @@
+- name: Crate file
+  copy:
+    content: "<?php
+    return array (
+      'components' =>
+      array (
+        'request' =>
+        array (
+          'cookieValidationKey' => '{{ item.key }}',
+        ),
+      ),
+    );"
+    dest: "{{ app_yii2_www }}/{{ item.name }}/config/main-local.php"
+    owner: bitrix
+    group: bitrix
+  with_items: "{{ app_yii_cookieValidationKey }}"

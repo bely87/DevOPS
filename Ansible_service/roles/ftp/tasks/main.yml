@@ -1,0 +1,26 @@
+- name: Install NET-Framework-Core from file
+  win_feature:
+    name: NET-Framework-Core
+    source: \\nc-dev-fs-1.nextcar.local\c$\Start\sources\sxs
+    state: present
+  become: yes
+  vars:  # not you can also just set these as host vars instead
+    ansible_become_method: runas
+    ansible_become_user: '{{ domain_user }}'
+    ansible_become_pass: '{{domain_password}}'
+
+- name: Install IIS (Web-Server only)
+  win_feature:
+    name:
+    - Web-Server
+    include_sub_features: yes
+    include_management_tools: yes
+    state: present
+
+#- name: Add a FTP
+#  win_iis_webbinding:
+#    name: FTP
+#    protocol: ftp
+#    port: 21
+#    physical_path: 'C:\Start'
+#    state: present

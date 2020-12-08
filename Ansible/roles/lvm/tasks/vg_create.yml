@@ -1,0 +1,17 @@
+- name: get disks for {{vg_name}}
+  set_fact:
+    disk: "/dev/{{ item.1.name }}"
+  with_subelements:
+    - "{{vm_config.vgs}}"
+    - disks
+  when: item.0.name in vg_name
+  register: disks
+
+- name: set disks_list for {{vg_name}}
+  set_fact:
+    disk_list: "{{ disks.results | selectattr('ansible_facts','defined') | map(attribute='ansible_facts.disk') |default('')| list | unique |join (',')}}"
+
+- name: vgcreate
+  lvg:
+    vg: "{{ vg_name }}"
+    pvs:  "{{disk_list}}"

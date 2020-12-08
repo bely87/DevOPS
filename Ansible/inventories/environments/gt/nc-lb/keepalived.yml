@@ -1,0 +1,4 @@
+vip_ips:
+  - { ip: "10.205.46.44/24", label: "tfi-nc-lb"}
+keepalived_check_proc_list:
+  - nginx

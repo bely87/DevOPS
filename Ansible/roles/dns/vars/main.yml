@@ -1,0 +1,10 @@
+---
+# vars file for dns
+vars_prompt:
+  - name: username
+    prompt: "username:"
+    private: no
+
+  - name: password
+    prompt: "password:"
+    private: yes

@@ -1,0 +1,17 @@
+<?php
+$domen = strpos($_SERVER['HTTP_HOST'], '.ru') === false ? '{{ nginx_yii2_domen }}' : 'nextcar.ru';
+
+return [
+    'myUrls' => [
+       'admin' => '//{{ nginx_yii2_backend_server_name }}' . $domen,
+       'dealer' => '//{{ nginx_yii2_dealer_server_name }}' . $domen,
+       'client' => '//{{ nginx_yii2_client_server_name }}' . $domen,
+       'frontend' => '//{{ nginx_yii2_frontend_server_name }}' . $domen,
+       'api' => '//{{ nginx_yii2_api_server_name }}' . $domen,
+   ],
+    'autoStat' => [
+      'login' => 'C8-Trade',
+      'password' => 'ki6hVaOG',
+      'mock' => true,
+  ],
+];

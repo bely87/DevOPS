@@ -1,0 +1,9 @@
+- name: Edit firewall
+  firewalld:
+    port: '{{ item.port }}{{ item.type }}'
+    zone: '{{ item.zone }}'
+    permanent: true
+    state: enabled
+  with_items: "{{ firewalld_add }}"
+  notify:
+  - reload firewalld

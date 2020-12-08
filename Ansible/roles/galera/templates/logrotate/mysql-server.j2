@@ -1,0 +1,33 @@
+# - I put everything in one block and added sharedscripts, so that mysql gets
+#   flush-logs'd only once.
+#   Else the binary logs would automatically increase by n times every day.
+# - The error log is obsolete, messages go to syslog now.
+{{ logrotate_mysql_slow_log_file }} {
+	daily
+	rotate 7
+	missingok
+	create 644 mysql mysql
+	nocompress
+#       delaycompress
+        dateext
+	sharedscripts
+	postrotate
+
+		if test -x /usr/bin/mysqladmin && \
+		   /usr/bin/mysqladmin ping &>/dev/null
+		then
+		   /usr/bin/mysql --defaults-file={{ logrotate_mycnf }} -e "FLUSH NO_WRITE_TO_BINLOG SLOW LOGS;"
+		fi
+
+        endscript
+
+        lastaction
+		DAY=$(date +%Y%m%d)
+		/bin/gzip {{ logrotate_mysql_slow_log_file }}-$DAY
+{% if logrotate_send_to_bkp == 1 %}
+		ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_ssh_key_path }} {{ logrotate_remote_user }}@{{ logrotate_server }} 'mkdir -p /home/{{ logrotate_remote_user }}/{{ env }}/{{ logrotate_project_name }}/{{ logrotate_hostname_short }}/'
+                nice /usr/bin/rsync -rt --bwlimit=10000 -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ logrotate_ssh_key_path }}" {{ logrotate_mysql_slow_log_file }}-$DAY.gz {{ logrotate_remote_user }}@{{ logrotate_server }}:/home/{{ logrotate_remote_user }}/{{ env }}/{{ logrotate_project_name }}/{{ logrotate_hostname_short }}/ > /dev/null 2>&1
+{% endif %}
+        endscript
+
+}

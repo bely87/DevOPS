@@ -1,0 +1,11 @@
+vm_config:
+  vgs:
+  - name: "vgdata-appdata"
+    disks:
+    - alias: "appdata"
+      name: "sdc"
+      size: "200"
+    lvs:
+    - name: "luks-appdata"
+      size: "200"
+      m_point: "/mnt/data"

@@ -1,0 +1,28 @@
+- name: add server AD
+  win_domain_membership:
+    dns_domain_name: "{{ domen_dns_domain_name }}"
+    hostname: "{{ inventory_hostname_short }}"
+    domain_admin_user: "{{ domain_user }}"
+    domain_admin_password: "{{ domain_password }}"
+    domain_ou_path: "{{ doman_ou_path }}"
+    reboot_required:
+    state: domain
+  register: domain_state
+
+- name: Enable RDP
+  raw: set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+
+#- name: Enable secure RDP
+#  raw: set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal ServerWinStationsRDP-Tcp' -name 'UserAuthentication' -Value 1"
+
+- name: Reboot server
+  win_reboot:
+  when: domain_state.reboot_required
+
+- pause:
+    seconds: 20
+  tags: create
+
+- name: gpupdate
+  win_command: 'gpupdate /force'
+  register: gpupdate

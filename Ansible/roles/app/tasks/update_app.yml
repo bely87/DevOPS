@@ -1,0 +1,9 @@
+- name: Copy rpm file to server
+  copy:
+     src: "{{ lookup('env','PWD') }}/templates/prod/{{ group_names[-1]}}/app/{{ app_rpm_name }}"
+     dest: /mnt/data/nextcar.rpm
+
+- name: install rpm app
+  yum:
+    name: /mnt/data/nextcar.rpm
+    state: present

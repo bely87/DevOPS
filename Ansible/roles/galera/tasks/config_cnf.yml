@@ -1,0 +1,41 @@
+---
+- block:
+  - name: 1011 check folders
+    file:
+      path: "{{ item }}"
+      state: directory
+      owner: mysql
+      group: mysql
+      recurse: yes
+    with_items: "{{ mysql_directories }}"
+
+  - debug:
+      var: cluster_ip
+
+  - name: 1011 Add mariadb configuration
+    template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: root
+      group: root
+      mode: 0644
+    with_items:
+      - src: 'config.cnf.j2'
+        dest: '/etc/my.cnf.d/mariadb.cnf'
+        data: '{{ galera_configs.0 }}'
+    notify: new config
+
+  - name: 1000 Add galera configuration
+    template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      owner: root
+      group: root
+      mode: 0644
+    with_items:
+      - src: 'config.cnf.j2'
+        dest: '/etc/my.cnf.d/galera.cnf'
+        data: '{{ galera_configs.1 }}'
+    notify: new config
+    when: not mysql_only
+  when: inventory_hostname not in groups.arbitrator|default([])

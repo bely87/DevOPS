@@ -1,0 +1,58 @@
+php_install_packages:
+  - rh-php71-php
+  - rh-php71-php-opcache
+  - rh-php71-php-gd
+  - rh-php71-php-cli
+  - rh-php71-php-mysqlnd
+  - rh-php71-php-fpm
+  - rh-php71-php-intl
+  - rh-php71-php-xml
+  - rh-php71-php-gd
+  - rh-php71-php-soap
+  - rh-php71-php-pecl-apcu
+  - rh-php71-php-pecl-apcu-devel
+  - rh-php71-php-mbstring
+  - memcached
+#  - php-pecl-geoip
+
+php_repo:
+  - ORGLOT_OFFICE_RHEL75_Mirror_rhel-7-server-rpms-mirror75
+  - ORGLOT_OFFICE_RHEL75_Mirror_rhel-7-server-optional-rpms-mirror75
+  - ORGLOT_OFFICE_RHEL75_Mirror_rhel-server-rhscl-7-rpms-mirror75
+
+php_sessions: /var/opt/rh/rh-php71/lib/php/session
+
+php_file_root: /etc/opt/rh/rh-php71
+php_edit_file:
+  - { file: "{{ php_file_root }}/php.ini", search: "memory_limit", value: 'memory_limit = 512M'}
+  - { file: "{{ php_file_root }}/php.ini", search: "post_max_size", value: 'post_max_size = 1024M'}
+  - { file: "{{ php_file_root }}/php.ini", search: "upload_max_filesize", value: 'upload_max_filesize = 1024M'}
+  - { file: "{{ php_file_root }}/php.ini", search: "max_input_vars", value: 'max_input_vars = 10000'}
+  - { file: "{{ php_file_root }}/php.ini", search: "expose_php", value: 'expose_php = Off'}
+  - { file: "{{ php_file_root }}/php.ini", search: "short_open_tag", value: 'short_open_tag = On'}
+  - { file: "{{ php_file_root }}/php.ini", search: "max_execution_time", value: 'max_execution_time = 300'}
+  - { file: "{{ php_file_root }}/php.ini", search: "error_reporting", value: 'error_reporting = E_ALL \& ~E_NOTICE'}
+  - { file: "{{ php_file_root }}/php.ini", search: "display_errors", value: 'display_errors = On'}
+  - { file: "{{ php_file_root }}/php.ini", search: "mbstring.func_overload", value: 'mbstring.func_overload = 2'}
+  - { file: "{{ php_file_root }}/php.ini", search: "mbstring.internal_encoding", value: 'mbstring.internal_encoding = UTF-8'}
+  - { file: "{{ php_file_root }}/php.ini", search: "session.save_path", value: 'session.save_path = "{{ php_sessions }}"'}
+  - { file: "{{ php_file_root }}/php.ini", search: "session.cookie_lifetime", value: 'session.cookie_lifetime = 592000'}
+  - { file: "{{ php_file_root }}/php.ini", search: "session.gc_divisor", value: 'session.gc_divisor = 500'}
+  - { file: "{{ php_file_root }}/php.ini", search: "session.gc_maxlifetime", value: 'session.gc_maxlifetime = 104800'}
+  - { file: "{{ php_file_root }}/php.ini", search: "realpath_cache_size", value: 'realpath_cache_size = 4096k'}
+  - { file: "{{ php_file_root }}/php.ini", search: "max_file_uploads", value: 'max_file_uploads = 100'}
+  - { file: "{{ php_file_root }}/php.ini", search: "date.timezone", value: "date.timezone ='Europe/Moscow'"}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "listen", value: 'listen = /var/opt/rh/rh-php71/run/php-fpm/www.sock'}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "listen.owner", value: 'listen.owner = bitrix'}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "listen.group", value: 'listen.group = bitrix'}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "user", value: 'user = bitrix'}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "group", value: 'group = bitrix'}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "pm", value: 'pm = ondemand'}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "pm.max_children", value: 'pm.max_children = 1500'}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "pm.start_servers", value: 'pm.start_servers = 50'}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "pm.min_spare_servers", value: 'pm.min_spare_servers = 25'}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "pm.max_spare_servers", value: 'pm.max_spare_servers = 75'}
+  - { file: "{{ php_file_root }}/php-fpm.d/www.conf", search: "pm.max_requests", value: 'pm.max_requests = 5000'}
+  - { file: "/etc/sysconfig/memcached", search: "CACHESIZE", value: 'CACHESIZE="512"'}
+  - { file: "/etc/sysconfig/memcached", search: "OPTIONS", value: 'OPTIONS="-l 127.0.0.1 -t 8"'}
+  - { file: "/etc/sysconfig/memcached", search: "MAXCONN", value: 'MAXCONN="10240"'}

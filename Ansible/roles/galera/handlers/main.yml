@@ -1,0 +1,24 @@
+---
+#-------------------------------unknown handler
+# - name: reload garbd
+#   systemd:
+#     name: "garbd_{{ galera_wsrep_cluster_name }}"
+#     daemon_reload: yes
+
+#-------------------------------config_cnf handler
+- name: new config
+  service:
+    name: mariadb
+    state: restarted
+  delegate_to: "{{ item }}"
+  with_items: "{{ (ansible_play_hosts | difference(groups['arbitrator'])) }}"
+  run_once: yes
+  serial: 1
+  when: galera_restart
+
+#-------------------------------config handler
+
+- name: reload mariadb
+  systemd:
+    name: mariadb
+    daemon_reload: yes

@@ -1,0 +1,3 @@
+zabbix_templates:
+- Template_linux_base
+- Template_Nginx

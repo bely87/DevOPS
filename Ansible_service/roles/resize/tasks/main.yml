@@ -1,0 +1,15 @@
+- name: Copy resize.txt
+  win_copy:
+    src: "{{ lookup('env','PWD') }}/templates/resize.txt.j2"
+    dest: 'c:\tmp\resize.txt'
+  register: txt_result
+
+- name: Copy DiskExtension.bat
+  win_copy:
+    src: "{{ lookup('env','PWD') }}/templates/DiskExtension.bat.j2"
+    dest: 'c:\tmp\DiskExtension.bat'
+  register: bat_result
+
+- name: Edit size
+  win_shell: 'c:\tmp\DiskExtension.bat'
+  when: bat_result is changed and txt_result is changed

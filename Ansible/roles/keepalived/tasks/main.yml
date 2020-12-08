@@ -1,0 +1,121 @@
+---
+- name: Get stats
+  local_action:
+    module: stat
+    path: "{{ keepalived_global_path }}"
+  become: no
+  register: global_path
+
+- name: Include global vars
+  include_vars:
+    dir: "{{ keepalived_global_path }}"
+    extensions:
+    - yml
+  when: global_path.stat.isdir is defined and global_path.stat.isdir
+
+- name: include block
+  when: keepalived_include is defined
+  tags: always
+  block:
+  - name: get all templates list
+    set_fact:
+      templates_all: "{{ templates_all|default([]) + [item] }}"
+    with_fileglob:
+    - "{{ keepalived_include }}/*.j2"
+
+  - name: exclude main* from templates list
+    set_fact:
+      templates: "{{ (templates_all | difference( templates_all | select('match', '[^ ]+main[^ ]+') | list )) | sort }}"
+
+# - name: set ip fact
+#   set_fact:
+#     ip: '{{  hostvars[ item ][ "ansible_"+keepalived_shared_iface ].ipv4.address }}'
+#   with_items: "{{ groups[ keepalived_group_name|default(group_names[-1],true) ] }}"
+#   delegate_to: "{{ item }}"
+#   run_once: yes
+#   tags: always
+
+- name: Install packages
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ keepalived_packages }}"
+
+# fix https://conf.stoloto.ru/pages/viewpage.action?pageId=26608610
+- block:
+  - name: Creating dir struct for fix
+    file:
+      path: /etc/systemd/system/keepalived.service.d/
+      state: directory
+
+  - name: Copy FIX with start delay
+    copy:
+      dest: /etc/systemd/system/keepalived.service.d/BZ1425828.conf
+      content: |
+        [Service]
+        ExecStartPre=/usr/bin/sleep 5
+
+  - systemd:
+      daemon_reload: yes
+
+  when: ansible_os_family == "RedHat"
+
+- sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: "{{ keepalived_file_path }}"
+    reload: yes
+  with_dict: "{{ keepalived_sysctl_directives }}"
+  tags: sysctl
+
+- name: ensure keepalive directries exist
+  file:
+    dest: /var/lib/keepalived
+    state: directory
+
+- name: keepalived check|notify scripts
+  copy:
+    dest: "{{ item.dest }}"
+    mode: "{{ item.mode }}"
+    content: "{{ item.content }}"
+  with_items:
+  - "{{ keepalived_check_scripts }}"
+  - "{{ keepalived_notify_scripts }}"
+
+- name: generate keepalived main template
+  copy:
+    dest: "{{ keepalived_include|default('/tmp') }}/main.j2"
+    content: "{{ config }}"
+  delegate_to: localhost
+  become: no
+  run_once: yes
+  tags: debug
+
+- name: deploy keepalived main template
+  # copy:
+  template:
+    src: "{{ keepalived_include|default('/tmp') }}/main.j2"
+    dest: "{{ config_dest }}"
+    backup: yes
+  delegate_to: "{{ config_host }}"
+  notify: restart keepalived
+  tags: debug
+
+- name: enable keepalived
+  service:
+    name: keepalived
+    state: started
+    enabled: yes
+
+- name: setup selinux permissions for keepalived
+  selinux_permissive:
+    name: keepalived_t
+    permissive: true
+  when: ansible_os_family == 'RedHat' and ansible_selinux.status != 'disabled'
+  ignore_errors: yes
+
+- name: restorecon keepalived dirs
+  shell: restorecon -Rv "{{ item.dest }}"
+  with_items: "{{ keepalived_check_scripts }}"
+  when: ansible_os_family == 'RedHat' and ansible_selinux.status != 'disabled'
+  ignore_errors: yes

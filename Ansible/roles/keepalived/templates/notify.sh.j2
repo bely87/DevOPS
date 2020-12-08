@@ -1,0 +1,16 @@
+#!/bin/bash
+#TYPE=$1
+#NAME=$2
+STATE=$3
+case $STATE in
+        "MASTER") /usr/local/sbin/qrator.sh
+                  ;;
+        "BACKUP") ip tunnel del qrtun
+                  ;;
+        "FAULT")  ip tunnel del qrtun
+                  exit 0
+                  ;;
+#        *)        /sbin/logger "ipsec unknown state"
+#                  exit 1
+#                  ;;
+esac

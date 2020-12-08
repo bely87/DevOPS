@@ -1,0 +1,92 @@
+---
+- name: 1111 check galera.cnf
+  stat:
+    path: '/etc/my.cnf.d/galera.cnf'
+  register: galera_cnf
+
+- block:
+    - name: 1011 Ensure MariaDB is running
+      service:
+        name: mariadb
+        state: started
+
+
+    - name: 1011 set root passwords
+      mysql_user:
+        name: root
+        host: "{{ item }}"
+        password: "{{ mysql_root_password }}"
+        state: present
+      with_items:
+        - 127.0.0.1
+        - ::1
+        - localhost
+
+    - name: 1011 Add .my.cnf
+      template: src=my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0600
+
+    - name: 1000 Add Galera SST user
+      mysql_user:
+        name: "{{ galera_sst_user }}"
+        host: "{{ item }}"
+        # login_password: no
+        password: "{{ galera_sst_pass }}"
+        priv: "*.*:ALL"
+        append_privs: yes
+      with_items:
+        - "localhost"
+      when: not mysql_only
+
+
+    - name: 1011 Remove anonymous users
+      mysql_user:
+        name: ""
+        host: "{{ item }}"
+        state: absent
+      with_items:
+        - localhost
+        - "{{ ansible_fqdn }}"
+      changed_when: False
+
+
+    - name: 1011 Disallow root login remotely
+      mysql_user:
+        name: root
+        host: "{{ item }}"
+        state: absent
+        login_user: root
+        login_host: localhost
+        login_password: "{{ mysql_root_password }}"
+      with_items:
+        - "{{ ansible_fqdn }}"
+        - ::1
+        - 127.0.0.1
+      changed_when: False
+
+    - name: 1011 Remove test database and access to it
+      mysql_db:
+        login_user: root
+        login_host: localhost
+        login_password: "{{ mysql_root_password }}"
+        name: "test"
+        state: absent
+      changed_when: False
+
+    - name: 1011 Add backend users
+      mysql_user:
+        name: "{{ item.name }}"
+        host: "{{ item.host }}"
+        password: "{{ item.password }}"
+        priv: "{{ item.grants }}"
+      with_items:
+        - "{{ mysql_users }}"
+
+    - name: 1011 Add logrotate users
+      mysql_user:
+        name: "{{ logrotate_mysql_user }}"
+        host: localhost
+        password: "{{ logrotate_mysql_pass }}"
+        priv: "*.*:PROCESS"
+
+
+  when: inventory_hostname not in groups.arbitrator and not galera_cnf.stat.exists

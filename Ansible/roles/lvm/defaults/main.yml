@@ -1,0 +1,14 @@
+---
+vm_config:
+  vgs:
+  - name: ""
+    disks:
+    - alias: ""
+      name: ""
+      size: ""
+    lvs:
+    - name: ""
+      size: ""
+      m_point: ""
+      opt: "" # default -default
+      fstype: "" # default -xfs

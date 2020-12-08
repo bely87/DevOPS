@@ -1,0 +1,30 @@
+---
+nginx_version: ''
+nginx_repo: 'ORGLOT_OFFICE_NginX_NginX_Stable_for_RHEL7_-_x86_64'
+
+
+nginx_uid: 809
+
+nginx_conf_dir: /etc/nginx
+nginx_home: /var/cache/nginx
+
+remove: 0
+nginx_user: 0
+
+nginx_log: /var/log/nginx
+nginx_yii2_frontend: frontend
+nginx_yii2_frontend_server_name:
+nginx_yii2_frontend_root: frontend/web/
+nginx_yii2_backend: admin
+nginx_yii2_backend_server_name: admin.
+nginx_yii2_backend_root: admin/web/
+nginx_yii2_dealer: dealer
+nginx_yii2_dealer_server_name: dealer.
+nginx_yii2_dealer_root: dealer/web/
+nginx_yii2_client: client
+nginx_yii2_client_server_name: client.
+nginx_yii2_client_root: client/web/
+nginx_yii2_api: api
+nginx_yii2_api_server_name: api.
+nginx_yii2_api_root: api/web/
+nginx_yii2_git_version: develop

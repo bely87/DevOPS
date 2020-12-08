@@ -1,0 +1,10 @@
+- name: Search 1c install
+  win_shell: 'Get-Childitem -Path "{{ app_folder }}" -Filter 8.3* | sort Name | select Name -last 1 -ExpandProperty Name'
+  register: sql_install
+  when: "'win-1c' in group_names"
+
+- name: Info base
+  win_command: '"{{ app_folder }}{{ sql_install.stdout | trim }}\bin\1cv8.exe" CREATEINFOBASE Srvr={{ inventory_hostname }};DBSrvr={{ hostvars[groups["win-db"][0]].inventory_hostname }};DB={{ item.name }};DBMS=MSSQLServer;Ref={{ item.name }}'
+  with_items: "{{ db_import_database_1c }}"
+  when: "'win-1c' in group_names"
+  ignore_errors: yes

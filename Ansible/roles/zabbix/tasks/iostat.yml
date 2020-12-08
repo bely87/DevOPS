@@ -1,0 +1,51 @@
+---
+- name: install iostat
+  package:
+    state: present
+    name: sysstat
+  # when: ansible_distribution == 'Debian'
+
+# - name: install iostat
+#   yum:
+#     state: present
+#     name: sysstat
+#   when: ansible_distribution == 'RedHat'
+
+- name: check zabbix homedir
+  file:
+    path: "{{ item }}"
+    state: directory
+    recurse: yes
+    owner: zabbix
+    group: zabbix
+  with_items:
+    - "{{ zabbix_scripts_dir }}"
+
+- name: add scripts
+  template:
+    src: "{{ item }}"
+    dest: "{{ zabbix_scripts_dir }}/{{ (item | basename) }}"
+    owner: zabbix
+    group: zabbix
+    mode: 0765
+  with_items:
+    - iostat/iostat-collect.sh
+    - iostat/iostat-parse.sh
+
+- name: add cron file
+  file:
+    path: /etc/cron.d/iostat
+    state: touch
+
+- name: add cron job
+  lineinfile:
+    path: /etc/cron.d/iostat
+    line: '*/1 * * * * root {{ zabbix_scripts_dir }}/iostat-collect.sh /tmp/iostat.out 19 3'
+
+- name: add zabbix userparameter not in GA
+  template:
+    src: iostat/userparameter_iostat.conf.j2
+    dest: /etc/zabbix/zabbix_agentd.d/userparameter_iostat.conf
+
+
+# - name:

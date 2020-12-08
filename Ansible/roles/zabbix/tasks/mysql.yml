@@ -1,0 +1,107 @@
+- name: register mysql_max_connections regex
+  shell: "mysql -e 'select @@max_connections;' | grep -v max_connections"
+  register: mysql_max_connections
+  ignore_errors: yes
+
+- set_fact:
+    zabbix_max_connections: "{{((mysql_max_connections.stdout | int)*0.7)| round(0,'floor')| int}}"
+
+- name: remove mysql userparameters from OIR generated file
+  lineinfile:
+    path: /etc/zabbix/zabbix_agentd.d/orglot-sys.conf
+    regexp: "{{ item }}"
+    line: "# mysql userparameters were moved to mysql-up.conf "
+  ignore_errors: yes
+  with_items:
+    - 'UserParameter=mysql.update*'
+    - 'UserParameter=mysql.all*'
+    - 'UserParameter=mysql.get*'
+    - 'UserParameter=mysql.dbsize*'
+    - 'UserParameter=mysql.tabledatasize*'
+    - 'UserParameter=mysql.tableindexsize*'
+    - 'UserParameter=mysql.wsrep*'
+
+- name: run regex
+  shell: "grep -o -P --exclude={mysql-up.conf,userparameter_mysql.conf} 'UserParameter=mysql+([.][a-z]+)?' /etc/zabbix/zabbix_agentd.d/* | wc -l"
+  register: userparameters_matched
+
+- name: check if mysql userparameter exist on a server
+  fail: msg="mysql userparameters already exist at /etc/zabbix/zabbix_agentd.d/ please remove lines containig them"
+  when: userparameters_matched.stdout != "0"
+
+- name: add zabbix_mysql_user
+  mysql_user:
+    name: "{{ zabbix_mysql_user }}"
+    # host: "{{ item }}"
+    password: "{{ zabbix_mysql_password }}"
+    priv: "*.*:SELECT,EXECUTE,REPLICATION CLIENT"
+    append_privs: yes
+  when: first_db_instance
+
+- name: create zabbix homedir
+  file:
+    path: "{{ item }}"
+    state: directory
+    recurse: yes
+    owner: zabbix
+    group: zabbix
+  with_items:
+    - "{{ zabbix_home_dir }}"
+    - "{{ zabbix_scripts_dir }}"
+    - "{{ zabbix_tmp_dir }}"
+
+- name: add zabbix my.cnf
+  template:
+    src: mysql/my.cnf.j2
+    dest: "{{ zabbix_home_dir }}/.my.cnf"
+    owner: zabbix
+    group: zabbix
+
+
+- name: copy sqldump to remote host
+  copy:
+    src: proc.sql
+    dest: /tmp/
+
+- name: import zabbix procedures
+  shell: 'mysql < /tmp/proc.sql'
+  ignore_errors: yes
+  when: first_db_instance
+
+- name: add mysql sh script
+  template:
+    src: mysql/my-sql.j2
+    dest: "{{ zabbix_scripts_dir }}/my-sql"
+    mode: 0755
+    owner: zabbix
+    group: zabbix
+
+
+- name: add mysql .conf file
+  template:
+    src: mysql/{{ item }}
+    dest: "/etc/zabbix/zabbix_agentd.d/{{ item[:-3] }}"
+  with_items:
+    # - other.conf.j2
+    - mysql-up.conf.j2
+    - userparameter_mysql.conf.j2
+
+- name: add mysql custom .conf file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - src: 'mysql/userparameter_mysql_custom.conf.j2'
+      dest: '/etc/zabbix/zabbix_agentd.d/userparameter_mysql_custom.conf'
+      data: '{{ zabbix_mysql_custom_userparameter.0 }}'
+
+
+
+
+# - name: add mysql template to template list
+#   set_fact: zabbix_templates="{{zabbix_templates}} + [ '0rglot-linux-mysql' ]"
+
+# - debug: msg=

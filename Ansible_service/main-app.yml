@@ -1,0 +1,2 @@
+- name: MAIN - backup BD
+  import_playbook: playbooks/backup.yml

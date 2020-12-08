@@ -1,0 +1,7 @@
+firewalld_add:
+  - { zone: "public", port: "24007-24008", type: "/tcp" }
+  - { zone: "public", port: "49152", type: "/tcp" }
+  - { zone: "public", port: "38465-38469", type: "/tcp" }
+  - { zone: "public", port: "111", type: "/tcp" }
+  - { zone: "public", port: "111", type: "/udp" }
+  - { zone: "public", port: "2049", type: "/tcp" }

@@ -1,0 +1,14 @@
+- name: MAIN - domain
+  import_playbook: playbooks/all.yml
+
+- name: MAIN - setting FS
+  import_playbook: playbooks/fs.yml
+
+- name: MAIN - setting DB
+  import_playbook: playbooks/db.yml
+
+- name: MAIN - setting BACK
+  import_playbook: playbooks/back.yml
+
+- name: MAIN - setting app
+  import_playbook: playbooks/app.yml

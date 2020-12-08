@@ -1,0 +1,8 @@
+---
+# - block:
+#   - name: 1000 ensure xinetd is enabled and running
+#     systemd:
+#       name: xinetd
+#       state: started
+#       enabled: yes
+#   when: inventory_hostname not in groups.arbitrator|default([]) and not mysql_only

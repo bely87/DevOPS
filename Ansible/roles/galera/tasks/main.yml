@@ -1,0 +1,103 @@
+---
+- name: get arbiter from arbitrators group
+  add_host:
+    groups: arbitrator
+    name: "{{ item }}"
+  with_items: "{{ groups['arbitrators'] }}"
+  when:
+  - groups['arbitrator'] == []
+  - hostvars[item].group in group_names
+
+- debug: msg="{{ ansible_play_hosts }}"
+
+- block:
+  - set_fact:
+      play_hosts_whihtout_arb: "{{ (ansible_play_hosts | difference(groups['arbitrator'])) }}"
+  - set_fact:
+      finnodb_buffer_pool_size: "{{ ansible_memtotal_mb/100*mem_persent }}"
+    when: inventory_hostname not in groups[ 'arbitrator' ]
+  - set_fact:
+      innodb_buffer_pool_size: "{{ finnodb_buffer_pool_size.split('.')[0]+'M' }}"
+    when: inventory_hostname not in groups[ 'arbitrator' ]
+  - set_fact:
+      galera_max_connections: "{{ ((ansible_memtotal_mb * 0.4)/3) | round(0,'floor')| int }}"
+    when: inventory_hostname not in groups[ 'arbitrator' ]
+  - debug: msg="{{ ansible_default_ipv4.address }}"
+  - set_fact:
+      cluster_ip: "{{ ansible_default_ipv4.address }}"
+    when: cluster_ip is not defined
+  - set_fact:
+      galera_wsrep_cluster_name: "{{ hostvars[ play_hosts_whihtout_arb.0 ].galera_wsrep_cluster_name | default(galera_wsrep_cluster_name) }}"
+      galera_wsrep_cluster_port: "{{ hostvars[ play_hosts_whihtout_arb.0 ].galera_wsrep_cluster_port | default(galera_wsrep_cluster_port) }}"
+    when: not mysql_only and inventory_hostname not in groups[ 'arbitrator' ]
+  tags: always
+
+#- debug: msg="{{ cluster_ip }}"
+
+- import_tasks: repos.yml
+  tags: install
+
+- import_tasks: packages.yml
+  tags: install
+
+- import_tasks: selinux.yml
+  tags: install
+
+- import_tasks: users.yml
+  tags: users
+
+- import_tasks: config_cnf.yml
+  tags: config_cnf
+
+- import_tasks: config.yml
+  tags: config
+
+- import_tasks: logrotate.yml
+  tags: logrotate
+  when: inventory_hostname not in groups[ 'arbitrator' ]
+  #для верности прогоним selinux еще раз в конце
+- import_tasks: selinux.yml
+  tags: install
+########################
+#Opertianal tasks block#
+########################
+
+- import_tasks: ops/uninstall.yml
+  tags: uninstall
+  when: galera_uninstall
+
+- debug: msg="{{ play_hosts_whihtout_arb }}"
+  tags: init
+
+- import_tasks: ops/init.yml
+  tags: init
+  when: galera_new_cluster and not mysql_only
+
+- import_tasks: ops/restart.yml
+  tags: restart
+  when: galera_restart_cluster and not mysql_only
+
+- import_tasks: ops/change_system_var_dyn.yml
+  tags: change_system_var_dyn
+  when: change_system_var_dyn
+
+# - import_tasks: ops/check.yml
+#   tags: check
+#   when: check
+###########################
+# Under development block #
+###########################
+
+- import_tasks: develop/slave.yml
+  tags: slave
+  when: slave
+
+- import_tasks: develop/backup.yml
+  tags: backup
+  when: backup
+
+####################
+# Deprecated block #
+####################
+# - import_tasks: deprecated/xinetd.yml
+#   tags: xinetd

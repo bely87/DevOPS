@@ -1,0 +1,20 @@
+---
+nginx_version: ''
+nginx_repo: ''
+
+
+nginx_uid: 809
+
+nginx_conf_dir: /etc/nginx
+nginx_home: /var/cache/nginx
+
+nginx_ssl_files: []
+
+# for all jinja2 features: {% raw %}, etc
+nginx_templates: []
+
+# for inline yaml
+nginx_configs: []
+
+remove: 0
+nginx_user: 0

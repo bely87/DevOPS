@@ -1,0 +1,17 @@
+- name: Edit file App
+  lineinfile:
+    dest={{ item.file }}
+    regexp='^;? ?{{ item.search }}'
+    insertbefore=BOF
+    line='{{ item.value }}'
+  with_items: "{{ php_edit_file }}"
+  notify:
+  - start memcached
+  - start php
+  - Enable php bash command
+
+- name: edit group folder
+  file:
+    path: "{{ php_sessions }}"
+    owner: bitrix
+    group: bitrix

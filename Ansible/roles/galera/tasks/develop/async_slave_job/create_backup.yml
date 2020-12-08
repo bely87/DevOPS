@@ -1,0 +1,110 @@
+---
+# vars list:
+# mysql_cb_dir_master - directory where the full backup will be placed
+# mysql_cb_space - "df -h" stdout
+# mysql_bkp_master - master server identification var
+# mysql_bkp_slave - slave server identification var
+# mysql_bkp_key_dest - private key location at master server
+# mysql_cb_slave_fqdn - slave fqdn
+# mysql_cb_dir_slave - backup directory at slave host
+
+# Master node block -----------------------------------------------------------
+- block:
+
+  - name: find out space for creating backup
+    shell: df -h
+    register: mysql_cb_space
+    ignore_errors: yes
+
+  - debug: msg="{{ mysql_cb_space.stdout_lines }}"
+  - pause:
+
+  - name: create full backup
+    shell: "innobackupex {{ mysql_cb_dir_master }}"
+
+  - name: create rsync user
+    user:
+      name: mysql_bkp_user
+      shell: /bin/bash
+      state: present
+      generate_ssh_key: yes
+      ssh_key_bits: 2048
+      ssh_key_file: .ssh/id_rsa
+
+  - name: copy backup
+    synchronize:
+      private_key: "{{ mysql_bkp_key_dest }}"
+      src: "{{ mysql_cb_dir_master }}"
+      dest: "rsync://{{ mysql_cb_slave_fqdn }}{{ mysql_cb_dir_slave }}"
+      recursive: yes
+    delegate_to: "{{ inventory_hostname }}"
+
+  - name: copy cnf files
+    synchronize:
+      private_key: "{{ mysql_bkp_key_dest }}"
+      src: "{{ item }}"
+      dest: "rsync://{{ mysql_cb_slave_fqdn }}{{ item }}"
+    delegate_to: "{{ inventory_hostname }}"
+    with_items:
+      - /root/.my.cnf
+      - /var/lib/zabbix/.my.cnf
+      - /var/lib/logrotate/.my.cnf
+
+  when: mysql_bkp_master
+
+  # Slave node block -----------------------------------------------------------
+- block:
+
+  - name: innobackupex apply log
+    shell: "innobackupex --apply-log {{ mysql_cb_dir_slave }}"
+    ignore_errors: yes
+
+  - name: remove data and mysql log folders
+    shell: "rm -rf /var/lib/mysql /var/log/mysql"
+    ignore_errors: yes
+
+  - name: innobackupex copy back
+    shell: "innobackupex --copy-back {{ mysql_cb_dir_slave }}"
+    ignore_errors: yes
+
+
+  - name: selinux and firewall rules
+    command: "{{ item }}"
+    with_items:
+      - "chown -R mysql:mysql /var/lib/mysql /var/log/mysql"
+      - "semanage fcontext --add -s unconfined_u -t mysqld_db_t '/var/lib/mysql/*'"
+      - "restorecon -Rv /var/lib/mysql/"
+      - "restorecon -Rv /var/log/mysql/"
+      - "semanage permissive -a mysqld_t"
+      - "semanage permissive -a zabbix_agent_t"
+      - "systemctl enable firewalld.service"
+      - "firewall-cmd --new-service=mysql --permanent"
+      - "firewall-cmd --new-service=zabbix-agent --permanent"
+      - "firewall-cmd --service=mysql --add-port=3306/tcp --permanent"
+      - "firewall-cmd --zone=public --add-service=mysql --add-service=zabbix-agent --permanent"
+      - "firewall-cmd --service=zabbix-agent --add-port=10050/tcp --permanent"
+      - "firewall-cmd --service=zabbix-agent --add-port=10050/udp --permanent"
+      - "firewall-cmd --zone=public --add-service=mysql --permanent"
+      - "firewall-cmd --new-service=galera --permanent"
+      - "firewall-cmd --service=galera --add-port=3306/tcp --add-port=4567/tcp --add-port={{galera_wsrep_cluster_port}}/udp --add-port={{galera_wsrep_cluster_port}}/tcp --add-port=4444/tcp --permanent"
+      - "firewall-cmd --new-zone=galeranet --permanent"
+      - "firewall-cmd --zone=galeranet --add-source={{ galera_wsrep_cluster_net }} --permanent"
+      - "firewall-cmd --zone=galeranet --add-service=mysql --add-service=galera --permanent"
+      - "firewall-cmd --reload"
+    ignore_errors: yes
+
+  - name: start mariadb
+    service:
+      name: mariadb
+      state: started
+      enabled: false
+
+  when: mysql_bkp_slave
+
+- block:
+  - name: delete rsync user
+    user:
+      name: mysql_bkp_user
+      shell: /bin/bash
+      state: absent
+  when: mysql_bkp_master

@@ -1,0 +1,32 @@
+# The main features must be implemented:
+# 1. Bootstrap slave in slave.yml (this playbook must fit general slave purposes)
+# 2. Check if slave is running and already set up
+# 3. Set unique server_id
+# 4. /backup directory must be not smaller than /var/lib/mysql data dir
+# 5. DONE copy backup script from templates/backup/mysql_slave_backup.sh.j2 to /usr/local/bin/mysql_slave_backup.sh
+# 5.1 DONE create /var/log/xtrabackup-log/ dir
+# 6. DONE copy cron script from templates/backup/backupMaria.cron.j2 /etc/cron.hourly/backupMaria
+# 7. DONE restart cron
+# 8. it would be best to create specific user for backups and use own cnf file for backupuser
+#### CAUTION: backup script depends on LSN numbers in backup names, so if you exec script manually please do not forget to delete or move backup file created (if it contains 'current' in the filename, not LSN) ####
+---
+- name: create xtrabackup log dir
+  file:
+    dest: /var/log/xtrabackup-log
+    state: directory
+
+- name: copy templates
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0700
+  with_items:
+    - { src: "templates/backup/backupMaria.cron.j2", dest: "/etc/cron.hourly/backupMaria" }
+    - { src: "templates/backup/mysql_slave_backup.sh.j2", dest: "/usr/local/bin/mysql_slave_backup.sh" }
+
+- name: restart cron
+  service:
+    name: crond
+    state: restarted

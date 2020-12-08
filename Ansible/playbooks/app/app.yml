@@ -1,0 +1,11 @@
+- name: playbook nc-app
+  hosts: nc-app
+  become: yes
+  gather_facts: no
+  serial: 1
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/nc-app.yml"
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/nginx.yml"
+
+  roles:
+    - { role: app, tags: app-commit, app-create }

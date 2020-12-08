@@ -1,0 +1,99 @@
+---
+mysql_only: 0
+galera_mariadb_repo: "ORGLOT_OFFICE_MariaDB_10_MariaDB_10_2_16"
+galera_mysql_version: 10.2.16
+galera_sst_pass:
+
+mysql_expire_logs_days: 7
+
+mysql_users:
+  - name: clustercheck
+    host: "localhost"
+    password:
+    grants: "*.*:PROCESS"
+
+
+    
+galera_configs:
+- |
+    [mysqld]
+    bind-address=0.0.0.0
+    character_set_server=utf8
+    connect_timeout=5
+    collation_server=utf8_general_ci
+    datadir={{ mysql_directories.0 }}
+    event_scheduler=OFF
+    expire_logs_days={{ mysql_expire_logs_days }}
+    general_log_file={{ mysql_directories.1 }}/mariadb.log
+    gtid_domain_id=1
+    gtid_strict_mode=1
+    init_connect='SET NAMES utf8 COLLATE utf8_unicode_ci'
+    innodb_lock_wait_timeout = 30
+    key_buffer_size=20M
+    lc_messages=en_US
+    log_bin_index={{ mysql_directories.1 }}/mariadb-bin.index
+    log_bin_trust_function_creators=1
+    log_bin={{ mysql_directories.1 }}/mariadb-bin
+    log_slave_updates=1
+    log_slow_rate_limit=1
+    log_slow_verbosity=query_plan
+    log_warnings=2
+    long_query_time=0.5
+    lower_case_table_names=1
+    max_allowed_packet=10M
+    max_binlog_size=100M
+    max_connections={{ galera_max_connections }}
+    open_files_limit=65536
+    server-id={{ galera_server_id }}
+    skip-name-resolve
+    slow_query_log_file={{ mysql_directories.1 }}/mariadb-slow.log
+    slow_query_log=1
+    sync_binlog=1
+    table-open-cache=10000
+    wait_timeout=600
+
+
+
+    transaction-isolation=REPEATABLE-READ #Default value. Not for OIR.
+    #tag6.8   or redmine#4863
+
+    #From OETS
+
+    relay-log={{ mysql_directories.1 }}/mysql-relay-bin.log
+
+    [mariadb]
+    binlog_format=row
+    default_storage_engine=InnoDB
+    innodb_autoinc_lock_mode=2
+    innodb_buffer_pool_size={{ innodb_buffer_pool_size }} # up to {{mem_persent}}% RAM
+    innodb_file_per_table=1
+    innodb_flush_log_at_trx_commit=1
+    innodb_flush_method=O_DIRECT
+    innodb_print_all_deadlocks=1
+    table_definition_cache=8592
+- |
+    [galera]
+    {%- if mysql_only -%}
+    wsrep_cluster_address="gcomm://
+      {%- for host in (ansible_play_hosts | difference(groups['db-backup'])) -%}
+        {{ hostvars[host].cluster_ip }}:{{ galera_wsrep_cluster_port }}
+        {%- if not loop.last -%},{%- endif -%}
+      {%- endfor -%}"
+    wsrep_cluster_name={{ galera_wsrep_cluster_name }}
+    wsrep_gtid_domain_id=5
+    wsrep_gtid_mode=1
+    wsrep_node_address={{ cluster_ip }}:{{ galera_wsrep_cluster_port }}
+    wsrep_node_name="{{ inventory_hostname_short }}"
+    wsrep_on=ON
+    wsrep_provider_options="gcache.size=1G;gcache.recover=yes"
+    wsrep_provider=/usr/lib64/galera/libgalera_smm.so
+    wsrep_slave_threads=1
+    wsrep_sst_auth="{{ galera_sst_user }}:{{ galera_sst_pass }}"
+    wsrep_sst_method=xtrabackup-v2
+    wsrep_sst_donor="
+      {%- for host in (ansible_play_hosts | difference(groups['arbitrator']) | difference(groups['db-backup'])) -%}
+        {%- if hostvars[host].inventory_hostname_short != inventory_hostname_short -%}
+        {{ hostvars[host].inventory_hostname_short }},
+        {%- endif -%}
+      {%- endfor -%}"
+    {%- endif -%}

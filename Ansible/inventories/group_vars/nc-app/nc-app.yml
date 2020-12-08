@@ -1,0 +1,7 @@
+app_yii2_www: /mnt/data/www_yii2
+app_yii2_edit_file:
+  - db-local.php
+  - params-local.php
+  - test-local.php
+
+app_yii2_files: /mnt/data/files

@@ -1,0 +1,39 @@
+- hosts: all
+  name: playbook for all hosts
+  become: no
+  gather_facts: no
+  serial: 1
+  vars_files:
+    - "{{ lookup('env','PWD') }}/inventories/environments/{{ env }}/{{ group_names[-1] }}/nc-vmware.yml"
+
+  roles:
+    - role: dns
+      tags: create
+      when: group_names[-1].find('win') == -1
+
+    - role: vsphere
+      tags: create
+
+- hosts: all
+  gather_facts: no
+  become: yes
+
+  pre_tasks:
+     - name: setup init
+       setup:
+       tags: create
+       when: group_names[-1].find('win') == -1
+
+  roles:
+    - role: hostname
+      setup:
+      tags: create
+      when: group_names[-1].find('win') == -1
+
+    - role: satellite
+      tags: create
+      when: group_names[-1].find('win') == -1
+
+    - role: idm-reg
+      tags: create
+      when: group_names[-1].find('win') == -1
