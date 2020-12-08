@@ -1,0 +1,1 @@
+﻿ Import-Module "\\NC-TE-FS-02\Soft_TEST$\1c\Setting\LHSNTrights.psm1" -verbose
